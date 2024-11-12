@@ -19,7 +19,53 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 
 ## 安装
 
+### 二进制
 
+从[Releases](https://github.com/DullJZ/ChannelMonitor/releases)页面下载最新版本的二进制文件，在同一目录下配置`config.json`后运行即可。建议使用`screen`或`nohup`等工具后台运行。
+
+```bash
+mkdir ChannelMonitor && cd ChannelMonitor
+wget https://github.com/DullJZ/ChannelMonitor/releases/download/v0.1.0/ChannelMonitor_linux_amd64
+chmod +x ChannelMonitor_linux_amd64
+# 下载并修改配置文件
+wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
+nano config.json
+screen -S ChannelMonitor
+./ChannelMonitor_linux_amd64
+```
+
+### Docker
+
+```bash
+docker pull dulljz/channel-monitor
+# 下载并修改配置文件
+wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
+nano config.json
+# 如果使用宿主机的数据库，可以简单使用host模式，
+# 并使用localhost:3306作为数据库地址
+docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -net host dulljz/channel-monitor
+```
+
+### Docker Compose
+
+```yaml
+version: '3'
+services:
+  channel-monitor:
+    image: dulljz/channel-monitor
+    volumes:
+      - ./config.json:/app/config.json
+    # 如果使用宿主机的数据库，可以简单使用host模式，
+    # 并使用localhost:3306作为数据库地址
+    network_mode: host
+```
+
+```bash
+# 下载并修改配置文件
+wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
+nano config.json
+docker-compose up -d
+```
 
 ## 配置
 

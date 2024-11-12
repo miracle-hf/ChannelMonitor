@@ -18,7 +18,53 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 
 ## Installation
 
+### Binary
 
+Download the latest version of the binary file from the [Releases](https://github.com/DullJZ/ChannelMonitor/releases) page. After configuring `config.json` in the same directory, you can run it. It is recommended to use tools like `screen` or `nohup` to run it in the background.
+
+```bash
+mkdir ChannelMonitor && cd ChannelMonitor
+wget https://github.com/DullJZ/ChannelMonitor/releases/download/v0.1.0/ChannelMonitor_linux_amd64
+chmod +x ChannelMonitor_linux_amd64
+# Download and modify the configuration file
+wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
+nano config.json
+screen -S ChannelMonitor
+./ChannelMonitor_linux_amd64
+```
+
+### Docker
+
+```bash
+docker pull dulljz/channel-monitor
+# Download and modify the configuration file
+wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
+nano config.json
+# If using the host's database, you can simply use the host mode,
+# and use localhost:3306 as the database address
+docker run -d --name ChannelMonitor -v ./config.json:/app/config.json --net host dulljz/channel-monitor
+```
+
+### Docker Compose
+
+```yaml
+version: '3'
+services:
+  channel-monitor:
+    image: dulljz/channel-monitor
+    volumes:
+      - ./config.json:/app/config.json
+    # If using the host's database, you can simply use the host mode,
+    # and use localhost:3306 as the database address
+    network_mode: host
+```
+
+```bash
+# Download and modify the configuration file
+wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
+nano config.json
+docker-compose up -d
+```
 
 ## Configuration
 
