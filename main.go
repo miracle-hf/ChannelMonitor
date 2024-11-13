@@ -5,12 +5,31 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/mattn/go-sqlite3"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 )
+
+var (
+	db     *sql.DB
+	config *Config
+)
+
+func initDB(dsn string) error {
+	var err error
+	if strings.Contains(dsn, "sqlite3") {
+		db, err = sql.Open("sqlite3", dsn)
+	} else {
+		db, err = sql.Open("mysql", dsn)
+	}
+	if err != nil {
+		return err
+	}
+	return db.Ping()
+}
 
 type Channel struct {
 	ID      int
@@ -214,3 +233,4 @@ func main() {
 		<-ticker.C
 	}
 }
+
