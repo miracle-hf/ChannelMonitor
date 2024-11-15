@@ -60,13 +60,14 @@ func fetchChannels() ([]Channel, error) {
 	var channels []Channel
 	for rows.Next() {
 		var c Channel
-		var channelType int
-		if err := rows.Scan(&c.ID, &channelType, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
+		if err := rows.Scan(&c.ID, &c.Type, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
 			return nil, err
 		}
 		
-		switch channelType {
+		switch c.Type {
 		case 40:
+			c.BaseURL = "https://api.siliconflow.cn"
+		case 999:
 			c.BaseURL = "https://api.siliconflow.cn"
 		}
 		
