@@ -5,31 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 )
-
-var (
-	db     *sql.DB
-	config *Config
-)
-
-func initDB(dsn string) error {
-	var err error
-	if strings.Contains(dsn, "sqlite3") {
-		db, err = sql.Open("sqlite3", dsn)
-	} else {
-		db, err = sql.Open("mysql", dsn)
-	}
-	if err != nil {
-		return err
-	}
-	return db.Ping()
-}
 
 type Channel struct {
 	ID      int
@@ -44,17 +26,31 @@ var (
 	config *Config
 )
 
-func initDB(dsn string) error {
+func initDB(dbType, dsn string) error {
 	var err error
-	db, err = sql.Open("mysql", dsn)
+	
+	switch dbType {
+	case "mysql":
+		db, err = sql.Open("mysql", dsn)
+	case "sqlite":
+		db, err = sql.Open("sqlite3", dsn)
+		if err != nil {
+			return err
+		}
+		db.SetMaxOpenConns(1)
+	default:
+		return fmt.Errorf("不支持的数据库类型: %s", dbType)
+	}
+	
 	if err != nil {
 		return err
 	}
+	
 	return db.Ping()
 }
 
 func fetchChannels() ([]Channel, error) {
-	query := "SELECT id, name, base_url, `key`, status FROM channels"
+	query := "SELECT id, type, name, base_url, `key`, status FROM channels"
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
@@ -64,10 +60,16 @@ func fetchChannels() ([]Channel, error) {
 	var channels []Channel
 	for rows.Next() {
 		var c Channel
-		if err := rows.Scan(&c.ID, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
+		var channelType int
+		if err := rows.Scan(&c.ID, &channelType, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
 			return nil, err
 		}
-		// 检查是否在排除列表中
+		
+		switch channelType {
+		case 40:
+			c.BaseURL = "https://api.siliconflow.cn"
+		}
+		
 		if contains(config.ExcludeChannel, c.ID) {
 			log.Printf("渠道 %s(ID:%d) 在排除列表中，跳过\n", c.Name, c.ID)
 			continue
@@ -197,7 +199,7 @@ func main() {
 		log.Fatal("解析时间周期失败：", err)
 	}
 
-	err = initDB(config.DbDsn)
+	err = initDB(config.DbType, config.DbDsn)
 	if err != nil {
 		log.Fatal("数据库连接失败：", err)
 	}
@@ -233,4 +235,3 @@ func main() {
 		<-ticker.C
 	}
 }
-
