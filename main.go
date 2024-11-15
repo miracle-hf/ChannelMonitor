@@ -15,6 +15,7 @@ import (
 
 type Channel struct {
 	ID      int
+	Type    int
 	Name    string
 	BaseURL string
 	Key     string
