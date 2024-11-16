@@ -42,7 +42,7 @@ jobs:
         go-version: '^1.22.1'
 
     - name: Build Binary
-      run: ｜
+      run: |
         sudo apt install upx -y
         bash build.sh
 
