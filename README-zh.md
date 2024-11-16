@@ -14,6 +14,7 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 - [x] 自动更新数据库中的每个渠道可用模型
 - [x] 支持排除不予监控的渠道和模型
 - [x] 支持间隔时间配置
+- [x] 支持多种数据库类型（MySQL、SQLite、PostgreSQL、SQL Server）
 - [ ] TODO: 多线程并发测试
 
 
@@ -44,6 +45,8 @@ nano config.json
 # 如果使用宿主机的数据库，可以简单使用host模式，
 # 并使用localhost:3306作为数据库地址
 docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -net host dulljz/channel-monitor
+# 如果使用SQLite数据库，挂载数据库文件
+# docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -v /path/to/database.db:/app/database.db dulljz/channel-monitor
 ```
 
 ### Docker Compose
@@ -55,6 +58,8 @@ services:
     image: dulljz/channel-monitor
     volumes:
       - ./config.json:/app/config.json
+      # 如果使用SQLite数据库，挂载数据库文件
+      # - /path/to/database.db:/app/database.db
     # 如果使用宿主机的数据库，可以简单使用host模式，
     # 并使用localhost:3306作为数据库地址
     network_mode: host
@@ -73,15 +78,58 @@ docker-compose up -d
 
 ```json
 {
-    // 排除不予监控的渠道ID
-    "exclude_channel": [5],
-    // 排除不予监控的模型ID
-    "exclude_model": ["advanced-voice"],
-    // 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
-    "models": ["gpt-3.5-turbo", "gpt-3.5-turbo"],
-    // 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
-    "time_period": "1h",
-    // 数据库DSN字符串，格式为：user:password@tcp(host:port)/database
-    "db_dsn": "YOUR_DB_DSN"
+  "exclude_channel": [5],
+  "exclude_model": ["advanced-voice"],
+  "models": ["gpt-3.5-turbo", "gpt-4"],
+  "force_models": false,
+  "time_period": "1h",
+  "db_type": "mysql",
+  "db_dsn": "YOUR_DB_DSN"
 }
 ```
+
+配置说明：
+- exclude_channel: 排除不予监控的渠道ID
+- exclude_model: 排除不予监控的模型ID  
+- models: 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
+- force_models: 如果为true，将强制只测试上述模型，不再获取渠道的模型，默认为false
+- time_period: 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
+- db_type: 数据库类型，包括mysql、sqlite、postgres、sqlserver
+- db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
+
+### MySQL
+
+```json
+{
+  "db_type": "mysql",
+  "db_dsn": "username:password@tcp(host:port)/dbname"
+}
+```
+
+### SQLite
+
+```json
+{
+  "db_type": "sqlite",
+  "db_dsn": "/path/to/database.db"
+}
+```
+
+### PostgreSQL
+
+```json
+{
+  "db_type": "postgres",
+  "db_dsn": "host=host port=port user=username password=password dbname=dbname sslmode=disable"
+}
+```
+
+### SQL Server
+
+```json
+{
+  "db_type": "sqlserver",
+  "db_dsn": "sqlserver://username:password@host:port?database=dbname"
+}
+```
+
