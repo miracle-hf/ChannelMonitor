@@ -14,6 +14,7 @@ import (
 
 type Channel struct {
 	ID      int
+	Type    int
 	Name    string
 	BaseURL string
 	Key     string
@@ -26,7 +27,7 @@ var (
 )
 
 func fetchChannels() ([]Channel, error) {
-	query := "SELECT id, name, base_url, `key`, status FROM channels"
+	query := "SELECT id, type, name, base_url, `key`, status FROM channels"
 	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		return nil, err
@@ -36,12 +37,20 @@ func fetchChannels() ([]Channel, error) {
 	var channels []Channel
 	for rows.Next() {
 		var c Channel
-		if err := rows.Scan(&c.ID, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
+		if err := rows.Scan(&c.ID, &c.Type, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
 			return nil, err
 		}
-		if c.BaseURL == "" {
-			c.BaseURL = "https://api.openai.com"
-		}
+		
+		switch c.Type {
+		case 40:
+			c.BaseURL = "https://api.siliconflow.cn"
+		case 999:
+			c.BaseURL = "https://api.siliconflow.cn"
+    case 1:
+		  if c.BaseURL == "" {
+			  c.BaseURL = "https://api.openai.com"
+		  }
+    }
 		// 检查是否在排除列表中
 		if contains(config.ExcludeChannel, c.ID) {
 			log.Printf("渠道 %s(ID:%d) 在排除列表中，跳过\n", c.Name, c.ID)
@@ -186,6 +195,7 @@ func main() {
 	}
 
 	db, err = NewDB(*config)
+  
 	if err != nil {
 		log.Fatal("数据库连接失败：", err)
 	}
