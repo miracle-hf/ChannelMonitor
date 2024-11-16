@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 版本信息
-VERSION="0.1.0"
+VERSION=$(cat VERSION)
 COMMIT_ID=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME=$(date "+%F %T")
 

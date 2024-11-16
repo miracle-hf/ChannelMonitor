@@ -69,6 +69,16 @@ func contains(slice []int, item int) bool {
 	return false
 }
 
+func containsString(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+
 func testModels(channel Channel) ([]string, error) {
 	var availableModels []string
 	// 从/v1/models接口获取模型列表
@@ -103,6 +113,10 @@ func testModels(channel Channel) ([]string, error) {
 		}
 		// 提取模型ID列表
 		for _, model := range response.Data {
+			if containsString(config.ExcludeModel, model.ID) {
+				log.Printf("模型 %s 在排除列表中，跳过\n", model.ID)
+				continue
+			}
 			modelList = append(modelList, model.ID)
 		}
 	}
