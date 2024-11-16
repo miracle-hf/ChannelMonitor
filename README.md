@@ -14,6 +14,7 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 - [x] Automatically update the available models in the database for each channel
 - [x] Support exclusion of channels and models from monitoring
 - [x] Support configurable intervals
+- [x] Support multiple database types, including MySQL, SQLite, PostgreSQL, and SQL Server
 - [ ] TODO: Multi-threaded concurrent testing
 
 ## Installation
@@ -43,6 +44,8 @@ nano config.json
 # If using the host's database, you can simply use the host mode,
 # and use localhost:3306 as the database address
 docker run -d --name ChannelMonitor -v ./config.json:/app/config.json --net host dulljz/channel-monitor
+# If using an SQLite database, mount the database file
+# docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -v /path/to/database.db:/app/database.db dulljz/channel-monitor
 ```
 
 ### Docker Compose
@@ -54,6 +57,8 @@ services:
     image: dulljz/channel-monitor
     volumes:
       - ./config.json:/app/config.json
+      # If using an SQLite database, mount the database file
+      # - /path/to/database.db:/app/database.db
     # If using the host's database, you can simply use the host mode,
     # and use localhost:3306 as the database address
     network_mode: host
@@ -72,14 +77,57 @@ The configuration file is `config.json` located in the same directory, with the 
 
 ```json
 {
-    // Exclude channel IDs from monitoring
-    "exclude_channel": [5],
-    // Exclude model IDs from monitoring
-    "exclude_model": ["advanced-voice"],
-    // List of models, used only when the channel's models cannot be retrieved (/v1/models)
-    "models": ["gpt-3.5-turbo", "gpt-3.5-turbo"],
-    // Time interval for model availability testing, recommended to be no less than 30 minutes; accepted time formats are s, m, h
-    "time_period": "1h",
-    // Database DSN string, format: user:password@tcp(host:port)/database
-    "db_dsn": "YOUR_DB_DSN"
+  "exclude_channel": [5],
+  "exclude_model": ["advanced-voice"],
+  "models": ["gpt-3.5-turbo", "gpt-4"],
+  "force_models": false,
+  "time_period": "1h",
+  "db_type": "mysql",
+  "db_dsn": "YOUR_DB_DSN"
 }
+```
+
+Configuration explanation:
+- exclude_channel: IDs of channels to exclude from monitoring
+- exclude_model: IDs of models to exclude from monitoring
+- models: List of models, used only when unable to retrieve models from the channel (/v1/models)
+- force_models: If true, only the above models will be tested, and channel models will not be fetched. Default is false
+- time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
+- db_type: Database type, including mysql, sqlite, postgres, sqlserver
+- db_dsn: Database DSN string, the format varies by database type. Examples below
+
+### MySQL
+
+```json
+{
+  "db_type": "mysql",
+  "db_dsn": "username:password@tcp(host:port)/dbname"
+}
+```
+
+### SQLite
+
+```json
+{
+  "db_type": "sqlite",
+  "db_dsn": "/path/to/database.db"
+}
+```
+
+### PostgreSQL
+
+```json
+{
+  "db_type": "postgres",
+  "db_dsn": "host=host port=port user=username password=password dbname=dbname sslmode=disable"
+}
+```
+
+### SQL Server
+
+```json
+{
+  "db_type": "sqlserver",
+  "db_dsn": "sqlserver://username:password@host:port?database=dbname"
+}
+```

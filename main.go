@@ -1,15 +1,15 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type Channel struct {
@@ -21,22 +21,13 @@ type Channel struct {
 }
 
 var (
-	db     *sql.DB
+	db     *gorm.DB
 	config *Config
 )
 
-func initDB(dsn string) error {
-	var err error
-	db, err = sql.Open("mysql", dsn)
-	if err != nil {
-		return err
-	}
-	return db.Ping()
-}
-
 func fetchChannels() ([]Channel, error) {
 	query := "SELECT id, name, base_url, `key`, status FROM channels"
-	rows, err := db.Query(query)
+	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +38,9 @@ func fetchChannels() ([]Channel, error) {
 		var c Channel
 		if err := rows.Scan(&c.ID, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
 			return nil, err
+		}
+		if c.BaseURL == "" {
+			c.BaseURL = "https://api.openai.com"
 		}
 		// 检查是否在排除列表中
 		if contains(config.ExcludeChannel, c.ID) {
@@ -77,7 +71,6 @@ func containsString(slice []string, item string) bool {
 	}
 	return false
 }
-
 
 func testModels(channel Channel) ([]string, error) {
 	var availableModels []string
@@ -175,8 +168,8 @@ func testModels(channel Channel) ([]string, error) {
 func updateModels(channelID int, models []string) error {
 	modelsStr := strings.Join(models, ",")
 	query := "UPDATE channels SET models = ? WHERE id = ?"
-	_, err := db.Exec(query, modelsStr, channelID)
-	return err
+	result := db.Exec(query, modelsStr, channelID)
+	return result.Error
 }
 
 func main() {
@@ -192,11 +185,10 @@ func main() {
 		log.Fatal("解析时间周期失败：", err)
 	}
 
-	err = initDB(config.DbDsn)
+	db, err = NewDB(*config)
 	if err != nil {
 		log.Fatal("数据库连接失败：", err)
 	}
-	defer db.Close()
 
 	ticker := time.NewTicker(duration)
 	defer ticker.Stop()

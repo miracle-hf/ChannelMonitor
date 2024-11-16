@@ -1,7 +1,9 @@
 {
     "exclude_channel": [5],
     "exclude_model": ["advanced-voice"],
-    "models": ["gpt-3.5-turbo", "gpt-3.5-turbo"],
+    "models": ["gpt-3.5-turbo", "gpt-4o"],
+    "force_models": false,
     "time_period": "1h",
+    "db_type": "YOUR_DB_TYPE",
     "db_dsn": "YOUR_DB_DSN"
 }
