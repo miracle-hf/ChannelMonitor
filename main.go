@@ -40,17 +40,17 @@ func fetchChannels() ([]Channel, error) {
 		if err := rows.Scan(&c.ID, &c.Type, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
 			return nil, err
 		}
-		
+
 		switch c.Type {
 		case 40:
 			c.BaseURL = "https://api.siliconflow.cn"
 		case 999:
 			c.BaseURL = "https://api.siliconflow.cn"
-    case 1:
-		  if c.BaseURL == "" {
-			  c.BaseURL = "https://api.openai.com"
-		  }
-    }
+		case 1:
+			if c.BaseURL == "" {
+				c.BaseURL = "https://api.openai.com"
+			}
+		}
 		// 检查是否在排除列表中
 		if contains(config.ExcludeChannel, c.ID) {
 			log.Printf("渠道 %s(ID:%d) 在排除列表中，跳过\n", c.Name, c.ID)
@@ -83,43 +83,49 @@ func containsString(slice []string, item string) bool {
 
 func testModels(channel Channel) ([]string, error) {
 	var availableModels []string
-	// 从/v1/models接口获取模型列表
-	req, err := http.NewRequest("GET", channel.BaseURL+"/v1/models", nil)
-	if err != nil {
-		return nil, fmt.Errorf("创建请求失败：%v", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+channel.Key)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
 	modelList := []string{}
-	if err != nil {
-		log.Println("获取模型列表失败：", err, "尝试自定义模型列表")
+	if config.ForceModels {
+		log.Println("强制使用自定义模型列表")
 		modelList = config.Models
-	} else {
-		defer resp.Body.Close()
-		body, _ := ioutil.ReadAll(resp.Body)
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("获取模型列表失败，状态码：%d，响应：%s", resp.StatusCode, string(body))
+	} else
+	{
+		// 从/v1/models接口获取模型列表
+		req, err := http.NewRequest("GET", channel.BaseURL+"/v1/models", nil)
+		if err != nil {
+			return nil, fmt.Errorf("创建请求失败：%v", err)
 		}
+		req.Header.Set("Authorization", "Bearer "+channel.Key)
 
-		// 解析响应JSON
-		var response struct {
-			Data []struct {
-				ID string `json:"id"`
-			} `json:"data"`
-		}
-
-		if err := json.Unmarshal(body, &response); err != nil {
-			return nil, fmt.Errorf("解析模型列表失败：%v", err)
-		}
-		// 提取模型ID列表
-		for _, model := range response.Data {
-			if containsString(config.ExcludeModel, model.ID) {
-				log.Printf("模型 %s 在排除列表中，跳过\n", model.ID)
-				continue
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Println("获取模型列表失败：", err, "尝试自定义模型列表")
+			modelList = config.Models
+		} else {
+			defer resp.Body.Close()
+			body, _ := ioutil.ReadAll(resp.Body)
+			if resp.StatusCode != http.StatusOK {
+				return nil, fmt.Errorf("获取模型列表失败，状态码：%d，响应：%s", resp.StatusCode, string(body))
 			}
-			modelList = append(modelList, model.ID)
+
+			// 解析响应JSON
+			var response struct {
+				Data []struct {
+					ID string `json:"id"`
+				} `json:"data"`
+			}
+
+			if err := json.Unmarshal(body, &response); err != nil {
+				return nil, fmt.Errorf("解析模型列表失败：%v", err)
+			}
+			// 提取模型ID列表
+			for _, model := range response.Data {
+				if containsString(config.ExcludeModel, model.ID) {
+					log.Printf("模型 %s 在排除列表中，跳过\n", model.ID)
+					continue
+				}
+				modelList = append(modelList, model.ID)
+			}
 		}
 	}
 	// 测试模型
@@ -195,7 +201,7 @@ func main() {
 	}
 
 	db, err = NewDB(*config)
-  
+
 	if err != nil {
 		log.Fatal("数据库连接失败：", err)
 	}
