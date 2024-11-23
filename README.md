@@ -77,17 +77,20 @@ The configuration file is `config.json` located in the same directory, with the 
 
 ```json
 {
+  "oneapi_type": "oneapi",
   "exclude_channel": [5],
   "exclude_model": ["advanced-voice"],
   "models": ["gpt-3.5-turbo", "gpt-4"],
   "force_models": false,
   "time_period": "1h",
   "db_type": "mysql",
-  "db_dsn": "YOUR_DB_DSN"
+  "db_dsn": "YOUR_DB_DSN",
+  "ability_hard_remove": false
 }
 ```
 
 Configuration explanation:
+- oneapi_type: Type of OneAPI, including oneapi, newapi, onehub (reserved field, currently has no effect)
 - exclude_channel: IDs of channels to exclude from monitoring
 - exclude_model: IDs of models to exclude from monitoring
 - models: List of models, used only when unable to retrieve models from the channel (/v1/models)
@@ -95,6 +98,7 @@ Configuration explanation:
 - time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
 - db_type: Database type, including mysql, sqlite, postgres, sqlserver
 - db_dsn: Database DSN string, the format varies by database type. Examples below
+- ability_hard_remove: Whether to hard delete unavailable models from the abilities table. If true, unavailable models will be deleted; if false (default), unavailable models will be soft deleted by setting their enable field to 0.
 
 ### MySQL
 

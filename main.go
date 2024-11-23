@@ -87,8 +87,7 @@ func testModels(channel Channel) ([]string, error) {
 	if config.ForceModels {
 		log.Println("强制使用自定义模型列表")
 		modelList = config.Models
-	} else
-	{
+	} else {
 		// 从/v1/models接口获取模型列表
 		req, err := http.NewRequest("GET", channel.BaseURL+"/v1/models", nil)
 		if err != nil {
@@ -181,10 +180,61 @@ func testModels(channel Channel) ([]string, error) {
 }
 
 func updateModels(channelID int, models []string) error {
+	// 开始事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 更新channels表
 	modelsStr := strings.Join(models, ",")
 	query := "UPDATE channels SET models = ? WHERE id = ?"
-	result := db.Exec(query, modelsStr, channelID)
-	return result.Error
+	result := tx.Exec(query, modelsStr, channelID)
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
+	}
+
+	// 更新abilities表
+	if config.AbilityHardRemove {
+		// 硬删除
+		query = "DELETE FROM abilities WHERE channel_id = ? AND model NOT IN (?)"
+		result = tx.Exec(query, channelID, models)
+		if result.Error != nil {
+			tx.Rollback()
+			return result.Error
+		}
+		// 修改
+		query = "UPDATE abilities SET enabled = 1 WHERE channel_id = ? AND model IN (?)"
+		result = tx.Exec(query, channelID, models)
+		if result.Error != nil {
+			tx.Rollback()
+			return result.Error
+		}
+	} else {
+		// 软删除
+		query = "UPDATE abilities SET enabled = 0 WHERE channel_id = ? AND model NOT IN (?)"
+		result = tx.Exec(query, channelID, models)
+		if result.Error != nil {
+			tx.Rollback()
+			return result.Error
+		}
+		// 修改
+		query = "UPDATE abilities SET enabled = 1 WHERE channel_id = ? AND model IN (?)"
+		result = tx.Exec(query, channelID, models)
+		if result.Error != nil {
+			tx.Rollback()
+			return result.Error
+		}
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 func main() {

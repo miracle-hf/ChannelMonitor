@@ -78,17 +78,20 @@ docker-compose up -d
 
 ```json
 {
+  "oneapi_type": "oneapi",
   "exclude_channel": [5],
   "exclude_model": ["advanced-voice"],
   "models": ["gpt-3.5-turbo", "gpt-4"],
   "force_models": false,
   "time_period": "1h",
   "db_type": "mysql",
-  "db_dsn": "YOUR_DB_DSN"
+  "db_dsn": "YOUR_DB_DSN",
+  "ability_hard_remove": false
 }
 ```
 
 配置说明：
+- oneapi_type: OneAPI的类型，包括oneapi、newapi、onehub（保留字段，暂时无影响）
 - exclude_channel: 排除不予监控的渠道ID
 - exclude_model: 排除不予监控的模型ID  
 - models: 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
@@ -96,6 +99,7 @@ docker-compose up -d
 - time_period: 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
 - db_type: 数据库类型，包括mysql、sqlite、postgres、sqlserver
 - db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
+- ability_hard_remove: 是否硬删除abilities表不可用模型，如果为true，将删除不可用模型；默认为false软删除，把不可用模型的enable改为0
 
 ### MySQL
 
