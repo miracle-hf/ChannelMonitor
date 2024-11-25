@@ -77,17 +77,19 @@ The configuration file is `config.json` located in the same directory, with the 
 
 ```json
 {
+  "oneapi_type": "oneapi",
   "exclude_channel": [5],
   "exclude_model": ["advanced-voice"],
   "models": ["gpt-3.5-turbo", "gpt-4"],
   "force_models": false,
   "time_period": "1h",
   "db_type": "mysql",
-  "db_dsn": "YOUR_DB_DSN"
+  "db_dsn": "YOUR_DB_DSN",
 }
 ```
 
 Configuration explanation:
+- oneapi_type: Type of OneAPI, including oneapi, newapi, onehub (reserved field, currently has no effect)
 - exclude_channel: IDs of channels to exclude from monitoring
 - exclude_model: IDs of models to exclude from monitoring
 - models: List of models, used only when unable to retrieve models from the channel (/v1/models)

@@ -78,17 +78,19 @@ docker-compose up -d
 
 ```json
 {
+  "oneapi_type": "oneapi",
   "exclude_channel": [5],
   "exclude_model": ["advanced-voice"],
   "models": ["gpt-3.5-turbo", "gpt-4"],
   "force_models": false,
   "time_period": "1h",
   "db_type": "mysql",
-  "db_dsn": "YOUR_DB_DSN"
+  "db_dsn": "YOUR_DB_DSN",
 }
 ```
 
 配置说明：
+- oneapi_type: OneAPI的类型，包括oneapi、newapi、onehub（保留字段，暂时无影响）
 - exclude_channel: 排除不予监控的渠道ID
 - exclude_model: 排除不予监控的模型ID  
 - models: 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
