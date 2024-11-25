@@ -196,36 +196,19 @@ func updateModels(channelID int, models []string) error {
 	}
 
 	// 更新abilities表
-	if config.AbilityHardRemove {
-		// 硬删除
-		query = "DELETE FROM abilities WHERE channel_id = ? AND model NOT IN (?)"
-		result = tx.Exec(query, channelID, models)
-		if result.Error != nil {
-			tx.Rollback()
-			return result.Error
-		}
-		// 修改
-		query = "UPDATE abilities SET enabled = 1 WHERE channel_id = ? AND model IN (?)"
-		result = tx.Exec(query, channelID, models)
-		if result.Error != nil {
-			tx.Rollback()
-			return result.Error
-		}
-	} else {
-		// 软删除
-		query = "UPDATE abilities SET enabled = 0 WHERE channel_id = ? AND model NOT IN (?)"
-		result = tx.Exec(query, channelID, models)
-		if result.Error != nil {
-			tx.Rollback()
-			return result.Error
-		}
-		// 修改
-		query = "UPDATE abilities SET enabled = 1 WHERE channel_id = ? AND model IN (?)"
-		result = tx.Exec(query, channelID, models)
-		if result.Error != nil {
-			tx.Rollback()
-			return result.Error
-		}
+	// 硬删除
+	query = "DELETE FROM abilities WHERE channel_id = ? AND model NOT IN (?)"
+	result = tx.Exec(query, channelID, models)
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
+	}
+	// 修改
+	query = "UPDATE abilities SET enabled = 1 WHERE channel_id = ? AND model IN (?)"
+	result = tx.Exec(query, channelID, models)
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
 	}
 
 	// 提交事务

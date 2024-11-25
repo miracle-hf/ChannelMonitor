@@ -85,7 +85,6 @@ The configuration file is `config.json` located in the same directory, with the 
   "time_period": "1h",
   "db_type": "mysql",
   "db_dsn": "YOUR_DB_DSN",
-  "ability_hard_remove": false
 }
 ```
 
@@ -98,7 +97,6 @@ Configuration explanation:
 - time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
 - db_type: Database type, including mysql, sqlite, postgres, sqlserver
 - db_dsn: Database DSN string, the format varies by database type. Examples below
-- ability_hard_remove: Whether to hard delete unavailable models from the abilities table. If true, unavailable models will be deleted; if false (default), unavailable models will be soft deleted by setting their enable field to 0.
 
 ### MySQL
 

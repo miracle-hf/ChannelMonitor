@@ -15,7 +15,6 @@ type Config struct {
 	TimePeriod        string   `json:"time_period"`
 	DbType            string   `json:"db_type"`
 	DbDsn             string   `json:"db_dsn"`
-	AbilityHardRemove bool     `json:"ability_hard_remove"`
 }
 
 func loadConfig() (*Config, error) {
@@ -36,8 +35,6 @@ func loadConfig() (*Config, error) {
 	if config.DbType == "" {
 		config.DbType = "mysql"
 	}
-
-    // config.AbilityHardRemove = false 自动默认值
 
 	return &config, nil
 }

@@ -6,6 +6,5 @@
     "force_models": false,
     "time_period": "1h",
     "db_type": "YOUR_DB_TYPE",
-    "db_dsn": "YOUR_DB_DSN",
-    "ability_hard_remove": false
+    "db_dsn": "YOUR_DB_DSN"
 }
