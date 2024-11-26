@@ -86,6 +86,8 @@ docker-compose up -d
   "time_period": "1h",
   "db_type": "mysql",
   "db_dsn": "YOUR_DB_DSN",
+  "base_url": "http://localhost:3000",
+  "system_token": "YOUR_SYSTEM_TOKEN"
 }
 ```
 
@@ -98,6 +100,8 @@ docker-compose up -d
 - time_period: 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
 - db_type: 数据库类型，包括mysql、sqlite、postgres、sqlserver
 - db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
+- base_url: OneAPI/NewAPI/OneHub的基础URL，如果使用host模式，可以直接使用http://localhost:3000，目前只有OneHub需要填写
+- system_token: 系统Token，目前只有OneHub需要填写
 
 ### MySQL
 

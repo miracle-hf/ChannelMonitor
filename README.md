@@ -85,6 +85,8 @@ The configuration file is `config.json` located in the same directory, with the 
   "time_period": "1h",
   "db_type": "mysql",
   "db_dsn": "YOUR_DB_DSN",
+  "base_url": "http://localhost:3000",
+  "system_token": ""
 }
 ```
 
@@ -97,6 +99,8 @@ Configuration explanation:
 - time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
 - db_type: Database type, including mysql, sqlite, postgres, sqlserver
 - db_dsn: Database DSN string, the format varies by database type. Examples below
+- base_url: The base URL for OneAPI/NewAPI/OneHub. If using host mode, you can directly use http://localhost:3000. Currently, only OneHub requires this field.
+- system_token: System token, currently only required for OneHub.
 
 ### MySQL
 

@@ -195,6 +195,14 @@ func updateModels(channelID int, models []string) error {
 		return result.Error
 	}
 
+	// 如果有名为refresh的渠道，删除
+	query = "DELETE FROM channels WHERE name = 'refresh'"
+	result = tx.Exec(query)
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
+	}
+
 	// 更新abilities表
 	// 硬删除
 	query = "DELETE FROM abilities WHERE channel_id = ? AND model NOT IN (?)"
@@ -217,6 +225,97 @@ func updateModels(channelID int, models []string) error {
 		return err
 	}
 
+	// 如果类型是onehub，post刷新
+	if config.OneAPIType == "onehub" {
+		// 添加渠道进行刷新
+		url := config.BaseURL + "/api/channel"
+		payload := map[string]interface{}{
+			"name":          "refresh",
+			"type":          1,
+			"key":           "test",
+			"base_url":      "",
+			"other":         "",
+			"proxy":         "",
+			"test_model":    "",
+			"model_mapping": "{}",
+			"models":        "test",
+			"groups":        []string{"default"},
+			"plugin":        map[string]interface{}{},
+			"tag":           "",
+			"only_chat":     false,
+			"pre_cost":      1,
+			"is_edit":       false,
+			"group":         "default",
+		}
+		payloadBytes, _ := json.Marshal(payload)
+
+		req, err := http.NewRequest("POST", url, strings.NewReader(string(payloadBytes)))
+		if err != nil {
+			return fmt.Errorf("创建请求失败：%v", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+config.SystemToken)
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("刷新失败：%v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("刷新失败，状态码：%d", resp.StatusCode)
+		}
+
+		log.Println("刷新成功")
+
+		// 获取刷新渠道
+		url = config.BaseURL + "/api/channel/?name=refresh"
+		req, err = http.NewRequest("GET", url, nil)
+		if err != nil {
+			return fmt.Errorf("创建请求失败：%v", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+config.SystemToken)
+
+		resp, err = client.Do(req)
+
+		if err != nil {
+			return fmt.Errorf("获取刷新渠道失败：%v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("获取刷新渠道失败，状态码：%d", resp.StatusCode)
+		}
+
+		body, _ := ioutil.ReadAll(resp.Body)
+		var response struct {
+			Data struct {
+				Data []struct {
+					ID int `json:"id"`
+				} `json:"data"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(body, &response); err != nil {
+			return fmt.Errorf("解析刷新渠道失败：%v", err)
+		}
+
+		for _, data := range response.Data.Data {
+			// 删除刷新渠道
+			url = config.BaseURL + "/api/channel/" + fmt.Sprintf("%d", data.ID)
+			req, err = http.NewRequest("DELETE", url, nil)
+			if err != nil {
+				return fmt.Errorf("创建请求失败：%v", err)
+			}
+			req.Header.Set("Authorization", "Bearer "+config.SystemToken)
+
+			resp, err = client.Do(req)
+			if err != nil {
+				return fmt.Errorf("删除刷新渠道失败：%v", err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("删除刷新渠道失败，状态码：%d", resp.StatusCode)
+			}
+		}
+	}
 	return nil
 }
 
@@ -251,6 +350,9 @@ func main() {
 		}
 
 		for _, channel := range channels {
+			if channel.Name == "refresh" {
+				continue
+			}
 			log.Printf("开始测试渠道 %s(ID:%d) 的模型\n", channel.Name, channel.ID)
 			models, err := testModels(channel)
 			if err != nil {
