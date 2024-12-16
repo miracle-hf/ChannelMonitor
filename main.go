@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -51,7 +52,7 @@ func fetchChannels() ([]Channel, error) {
 				c.BaseURL = "https://api.openai.com"
 			}
 		}
-		// 检查是否在排除列表中
+		// 检查是否在排��列表中
 		if contains(config.ExcludeChannel, c.ID) {
 			log.Printf("渠道 %s(ID:%d) 在排除列表中，跳过\n", c.Name, c.ID)
 			continue
@@ -81,7 +82,9 @@ func containsString(slice []string, item string) bool {
 	return false
 }
 
-func testModels(channel Channel) ([]string, error) {
+func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
+	defer wg.Done()
+
 	var availableModels []string
 	modelList := []string{}
 	if config.ForceModels {
@@ -91,7 +94,8 @@ func testModels(channel Channel) ([]string, error) {
 		// 从/v1/models接口获取模型列表
 		req, err := http.NewRequest("GET", channel.BaseURL+"/v1/models", nil)
 		if err != nil {
-			return nil, fmt.Errorf("创建请求失败：%v", err)
+			log.Printf("创建请求失败：%v\n", err)
+			return
 		}
 		req.Header.Set("Authorization", "Bearer "+channel.Key)
 
@@ -104,7 +108,8 @@ func testModels(channel Channel) ([]string, error) {
 			defer resp.Body.Close()
 			body, _ := ioutil.ReadAll(resp.Body)
 			if resp.StatusCode != http.StatusOK {
-				return nil, fmt.Errorf("获取模型列表失败，状态码：%d，响应：%s", resp.StatusCode, string(body))
+				log.Printf("获取模型列表失败，状态码：%d，响应：%s\n", resp.StatusCode, string(body))
+				return
 			}
 
 			// 解析响应JSON
@@ -115,7 +120,8 @@ func testModels(channel Channel) ([]string, error) {
 			}
 
 			if err := json.Unmarshal(body, &response); err != nil {
-				return nil, fmt.Errorf("解析模型列表失败：%v", err)
+				log.Printf("解析模型列表失败：%v\n", err)
+				return
 			}
 			// 提取模型ID列表
 			for _, model := range response.Data {
@@ -127,56 +133,74 @@ func testModels(channel Channel) ([]string, error) {
 			}
 		}
 	}
-	// 测试模型
+	// 测试模型并发处理
+	modelWg := sync.WaitGroup{}
+	modelMu := sync.Mutex{}
 	for _, model := range modelList {
-		url := channel.BaseURL
-		if !strings.Contains(channel.BaseURL, "/v1/chat/completions") {
-			if !strings.HasSuffix(channel.BaseURL, "/chat") {
-				if !strings.HasSuffix(channel.BaseURL, "/v1") {
-					url += "/v1"
+		modelWg.Add(1)
+		go func(model string) {
+			defer modelWg.Done()
+			url := channel.BaseURL
+			if !strings.Contains(channel.BaseURL, "/v1/chat/completions") {
+				if !strings.HasSuffix(channel.BaseURL, "/chat") {
+					if !strings.HasSuffix(channel.BaseURL, "/v1") {
+						url += "/v1"
+					}
+					url += "/chat"
 				}
-				url += "/chat"
+				url += "/completions"
 			}
-			url += "/completions"
-		}
 
-		// 构造请求
-		reqBody := map[string]interface{}{
-			"model": model,
-			"messages": []map[string]string{
-				{"role": "user", "content": "Hello! Reply in short"},
-			},
-		}
-		jsonData, _ := json.Marshal(reqBody)
+			// 构造请求
+			reqBody := map[string]interface{}{
+				"model": model,
+				"messages": []map[string]string{
+					{"role": "user", "content": "Hello! Reply in short"},
+				},
+			}
+			jsonData, _ := json.Marshal(reqBody)
 
-		log.Printf("测试渠道 %s(ID:%d) 的模型 %s\n", channel.Name, channel.ID, model)
+			log.Printf("测试渠道 %s(ID:%d) 的模型 %s\n", channel.Name, channel.ID, model)
 
-		req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonData)))
-		if err != nil {
-			log.Println("创建请求失败：", err)
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+channel.Key)
+			req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonData)))
+			if err != nil {
+				log.Printf("创建请求失败：%v\n", err)
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+channel.Key)
 
-		client := &http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Printf("\033[31m请求失败：%v\033[0m\n", err)
-			continue
-		}
-		defer resp.Body.Close()
+			client := &http.Client{Timeout: 10 * time.Second}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("\033[31m请求失败：%v\033[0m\n", err)
+				return
+			}
+			defer resp.Body.Close()
 
-		body, _ := ioutil.ReadAll(resp.Body)
-		if resp.StatusCode == http.StatusOK {
-			// 根据返回内容判断是否成功
-			availableModels = append(availableModels, model)
-			log.Printf("\033[32m渠道 %s(ID:%d) 的模型 %s 测试成功\033[0m\n", channel.Name, channel.ID, model)
-		} else {
-			log.Printf("\033[31m渠道 %s(ID:%d) 的模型 %s 测试失败，状态码：%d，响应：%s\033[0m\n", channel.Name, channel.ID, model, resp.StatusCode, string(body))
-		}
+			body, _ := ioutil.ReadAll(resp.Body)
+			if resp.StatusCode == http.StatusOK {
+				// 根据返回内容判断是否成功
+				modelMu.Lock()
+				availableModels = append(availableModels, model)
+				modelMu.Unlock()
+				log.Printf("\033[32m渠道 %s(ID:%d) 的模型 %s 测试成功\033[0m\n", channel.Name, channel.ID, model)
+			} else {
+				log.Printf("\033[31m渠道 %s(ID:%d) 的模型 %s 测试失败，状态码：%d，响应：%s\033[0m\n", channel.Name, channel.ID, model, resp.StatusCode, string(body))
+			}
+		}(model)
 	}
-	return availableModels, nil
+	modelWg.Wait()
+
+	// 更新模型
+	mu.Lock()
+	err := updateModels(channel.ID, availableModels)
+	mu.Unlock()
+	if err != nil {
+		log.Printf("\033[31m更新渠道 %s(ID:%d) 的模型失败：%v\033[0m\n", channel.Name, channel.ID, err)
+	} else {
+		log.Printf("渠道 %s(ID:%d) 可用模型：%v\n", channel.Name, channel.ID, availableModels)
+	}
 }
 
 func updateModels(channelID int, models []string) error {
@@ -349,23 +373,16 @@ func main() {
 			continue
 		}
 
+		var wg sync.WaitGroup
+		var mu sync.Mutex
 		for _, channel := range channels {
 			if channel.Name == "refresh" {
 				continue
 			}
-			log.Printf("开始测试渠道 %s(ID:%d) 的模型\n", channel.Name, channel.ID)
-			models, err := testModels(channel)
-			if err != nil {
-				log.Printf("\033[31m渠道 %s(ID:%d) 测试模型失败：%v\033[0m\n", channel.Name, channel.ID, err)
-				continue
-			}
-			err = updateModels(channel.ID, models)
-			if err != nil {
-				log.Printf("\033[31m更新渠道 %s(ID:%d) 的模型失败：%v\033[0m\n", channel.Name, channel.ID, err)
-			} else {
-				log.Printf("渠道 %s(ID:%d) 可用模型：%v\n", channel.Name, channel.ID, models)
-			}
+			wg.Add(1)
+			go testModels(channel, &wg, &mu)
 		}
+		wg.Wait()
 
 		// 等待下一个周期
 		<-ticker.C

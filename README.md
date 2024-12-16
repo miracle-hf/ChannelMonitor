@@ -15,7 +15,7 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 - [x] Support exclusion of channels and models from monitoring
 - [x] Support configurable intervals
 - [x] Support multiple database types, including MySQL, SQLite, PostgreSQL, and SQL Server
-- [ ] TODO: Multi-threaded concurrent testing
+- [x] Concurrent testing
 
 ## Installation
 

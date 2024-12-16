@@ -15,7 +15,7 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 - [x] 支持排除不予监控的渠道和模型
 - [x] 支持间隔时间配置
 - [x] 支持多种数据库类型（MySQL、SQLite、PostgreSQL、SQL Server）
-- [ ] TODO: 多线程并发测试
+- [x] 并发测试
 
 
 ## 安装
