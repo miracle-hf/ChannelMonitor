@@ -16,6 +16,7 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 - [x] 支持间隔时间配置
 - [x] 支持多种数据库类型（MySQL、SQLite、PostgreSQL、SQL Server）
 - [x] 并发测试
+- [x] 支持Uptime Kuma， 在测试时Push URL来可视化模型可用性
 
 
 ## 安装
@@ -87,7 +88,17 @@ docker-compose up -d
   "db_type": "mysql",
   "db_dsn": "YOUR_DB_DSN",
   "base_url": "http://localhost:3000",
-  "system_token": "YOUR_SYSTEM_TOKEN"
+  "system_token": "YOUR_SYSTEM_TOKEN",
+  "uptime-kuma": {
+    "status": "disabled",
+    "model_url": {
+      "gpt-3.5-turbo": "https://demo.kuma.pet/api/push/A12n43563?status=up&msg=OK&ping=",
+      "gpt-4o": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+    },
+    "channel_url": {
+      "5": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+    }
+  }
 }
 ```
 
@@ -102,6 +113,7 @@ docker-compose up -d
 - db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
 - base_url: OneAPI/NewAPI/OneHub的基础URL，如果使用host模式，可以直接使用http://localhost:3000，目前只有OneHub需要填写
 - system_token: 系统Token，目前只有OneHub需要填写
+- uptime-kuma: Uptime Kuma的配置，status为`enabled`或`disabled`，model_url和channel_url为模型和渠道的可用性Push URL
 
 ### MySQL
 

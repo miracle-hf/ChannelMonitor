@@ -17,6 +17,11 @@ type Config struct {
 	DbDsn          string   `json:"db_dsn"`
 	BaseURL        string   `json:"base_url"`
 	SystemToken    string   `json:"system_token"`
+	UptimeKuma     struct {
+		Status     string            `json:"status"`
+		ModelURL   map[string]string `json:"model_url"`
+		ChannelURL map[string]string `json:"channel_url"`
+	} `json:"uptime-kuma"`
 }
 
 func loadConfig() (*Config, error) {
@@ -40,6 +45,10 @@ func loadConfig() (*Config, error) {
 
 	if config.BaseURL[len(config.BaseURL)-1] == '/' {
 		config.BaseURL = config.BaseURL[:len(config.BaseURL)-1]
+	}
+
+	if config.UptimeKuma.Status == "" {
+		config.UptimeKuma.Status = "disabled"
 	}
 
 	return &config, nil

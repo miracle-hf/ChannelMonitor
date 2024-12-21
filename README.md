@@ -16,6 +16,7 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 - [x] Support configurable intervals
 - [x] Support multiple database types, including MySQL, SQLite, PostgreSQL, and SQL Server
 - [x] Concurrent testing
+- [x] Support Uptime Kuma, push URL during testing to visualize model availability
 
 ## Installation
 
@@ -86,7 +87,17 @@ The configuration file is `config.json` located in the same directory, with the 
   "db_type": "mysql",
   "db_dsn": "YOUR_DB_DSN",
   "base_url": "http://localhost:3000",
-  "system_token": ""
+  "system_token": "YOUR_SYSTEM_TOKEN",
+  "uptime-kuma": {
+    "status": "disabled",
+    "model_url": {
+      "gpt-3.5-turbo": "https://demo.kuma.pet/api/push/A12n43563?status=up&msg=OK&ping=",
+      "gpt-4o": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+    },
+    "channel_url": {
+      "5": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+    }
+  }
 }
 ```
 
@@ -101,6 +112,7 @@ Configuration explanation:
 - db_dsn: Database DSN string, the format varies by database type. Examples below
 - base_url: The base URL for OneAPI/NewAPI/OneHub. If using host mode, you can directly use http://localhost:3000. Currently, only OneHub requires this field.
 - system_token: System token, currently only required for OneHub.
+- uptime-kuma: Configuration for Uptime Kuma. The status can be `enabled` or `disabled`. The model_url and channel_url are the availability Push URLs for models and channels.
 
 ### MySQL
 

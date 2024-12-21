@@ -52,7 +52,7 @@ func fetchChannels() ([]Channel, error) {
 				c.BaseURL = "https://api.openai.com"
 			}
 		}
-		// 检查是否在排��列表中
+		// 检查是否在排除列表中
 		if contains(config.ExcludeChannel, c.ID) {
 			log.Printf("渠道 %s(ID:%d) 在排除列表中，跳过\n", c.Name, c.ID)
 			continue
@@ -185,6 +185,13 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 				availableModels = append(availableModels, model)
 				modelMu.Unlock()
 				log.Printf("\033[32m渠道 %s(ID:%d) 的模型 %s 测试成功\033[0m\n", channel.Name, channel.ID, model)
+				// 推送UptimeKuma
+				if err := pushModelUptime(model); err != nil {
+					log.Printf("\033[31m推送UptimeKuma失败：%v\033[0m\n", err)
+				}
+				if err := pushChannelUptime(channel.ID); err != nil {
+					log.Printf("\033[31m推送UptimeKuma失败：%v\033[0m\n", err)
+				}
 			} else {
 				log.Printf("\033[31m渠道 %s(ID:%d) 的模型 %s 测试失败，状态码：%d，响应：%s\033[0m\n", channel.Name, channel.ID, model, resp.StatusCode, string(body))
 			}
@@ -340,6 +347,64 @@ func updateModels(channelID int, models []string) error {
 			}
 		}
 	}
+	return nil
+}
+
+func pushModelUptime(modelName string) error {
+	if config.UptimeKuma.Status != "enabled" {
+		return nil
+	}
+
+	pushURL, ok := config.UptimeKuma.ModelURL[modelName]
+	if !ok {
+		return fmt.Errorf("找不到模型 %s 的推送地址", modelName)
+	}
+
+	req, err := http.NewRequest("GET", pushURL, nil)
+	if err != nil {
+		return fmt.Errorf("创建请求失败：%v", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("推送失败：%v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("推送失败，状态码：%d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func pushChannelUptime(channelID int) error {
+	if config.UptimeKuma.Status != "enabled" {
+		return nil
+	}
+
+	pushURL, ok := config.UptimeKuma.ChannelURL[fmt.Sprintf("%d", channelID)]
+	if !ok {
+		return fmt.Errorf("找不到渠道 %d 的推送地址", channelID)
+	}
+
+	req, err := http.NewRequest("GET", pushURL, nil)
+	if err != nil {
+		return fmt.Errorf("创建请求失败：%v", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("推送失败：%v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("推送失败，状态码：%d", resp.StatusCode)
+	}
+
 	return nil
 }
 
