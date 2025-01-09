@@ -24,6 +24,7 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 ### 二进制
 
 从[Releases](https://github.com/DullJZ/ChannelMonitor/releases)页面下载最新版本的二进制文件，在同一目录下配置`config.json`后运行即可。建议使用`screen`或`nohup`等工具后台运行。
+注意⚠️：如果你需要使用SQLite数据库，请使用docker方案或自行启用CGO编译。
 
 ```bash
 mkdir ChannelMonitor && cd ChannelMonitor
