@@ -23,6 +23,7 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 ### Binary
 
 Download the latest version of the binary file from the [Releases](https://github.com/DullJZ/ChannelMonitor/releases) page. After configuring `config.json` in the same directory, you can run it. It is recommended to use tools like `screen` or `nohup` to run it in the background.
+Note ⚠️: If you need to use an SQLite database, please use the Docker solution or compile yourself after enabling CGO.
 
 ```bash
 mkdir ChannelMonitor && cd ChannelMonitor

@@ -20,6 +20,7 @@ type Channel struct {
 	BaseURL string
 	Key     string
 	Status  int
+	ModelMapping map[string]string
 }
 
 var (
@@ -28,7 +29,7 @@ var (
 )
 
 func fetchChannels() ([]Channel, error) {
-	query := "SELECT id, type, name, base_url, `key`, status FROM channels"
+	query := "SELECT id, type, name, base_url, `key`, status, model_mapping FROM channels"
 	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		return nil, err
@@ -38,8 +39,15 @@ func fetchChannels() ([]Channel, error) {
 	var channels []Channel
 	for rows.Next() {
 		var c Channel
-		if err := rows.Scan(&c.ID, &c.Type, &c.Name, &c.BaseURL, &c.Key, &c.Status); err != nil {
+		var modelMapping string
+		if err := rows.Scan(&c.ID, &c.Type, &c.Name, &c.BaseURL, &c.Key, &c.Status, &modelMapping); err != nil {
 			return nil, err
+		}
+		c.ModelMapping = make(map[string]string)
+		if modelMapping != "" {
+			if err := json.Unmarshal([]byte(modelMapping), &c.ModelMapping); err != nil {
+				return nil, err
+			}
 		}
 
 		switch c.Type {
@@ -201,7 +209,7 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 
 	// 更新模型
 	mu.Lock()
-	err := updateModels(channel.ID, availableModels)
+	err := updateModels(channel.ID, availableModels, channel.ModelMapping)
 	mu.Unlock()
 	if err != nil {
 		log.Printf("\033[31m更新渠道 %s(ID:%d) 的模型失败：%v\033[0m\n", channel.Name, channel.ID, err)
@@ -210,11 +218,22 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 	}
 }
 
-func updateModels(channelID int, models []string) error {
+func updateModels(channelID int, models []string, modelMapping map[string]string) error {
 	// 开始事务
 	tx := db.Begin()
 	if tx.Error != nil {
 		return tx.Error
+	}
+
+	// 处理模型映射，用modelMapping反向替换models中的模型
+	invertedMapping := make(map[string]string)
+	for k, v := range modelMapping {
+		invertedMapping[v] = k
+	}
+	for i, model := range models {
+		if v, ok := invertedMapping[model]; ok {
+			models[i] = v
+		}
 	}
 
 	// 更新channels表
