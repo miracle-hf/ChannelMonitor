@@ -22,6 +22,26 @@ type Config struct {
 		ModelURL   map[string]string `json:"model_url"`
 		ChannelURL map[string]string `json:"channel_url"`
 	} `json:"uptime-kuma"`
+	Notification struct {
+		SMTP struct {
+			Enabled  bool   `json:"enabled"`
+			Host     string `json:"host"`
+			Port     int    `json:"port"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+			From     string `json:"from"`
+			To       string `json:"to"`
+		} `json:"smtp"`
+		Webhook struct {
+			Enabled  bool   `json:"enabled"`
+			Type     string `json:"type"`
+			Telegram struct {
+				ChatID string `json:"chat_id"`
+				Retry  int    `json:"retry"`
+			}
+			Secret string `json:"secret"`
+		} `json:"webhook"`
+	} `json:"notification"`
 }
 
 func loadConfig() (*Config, error) {

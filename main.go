@@ -219,6 +219,13 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 }
 
 func updateModels(channelID int, models []string, modelMapping map[string]string) error {
+	// 获取旧的模型列表
+	var oldModels string
+	if err := db.Raw("SELECT models FROM channels WHERE id = ?", channelID).Scan(&oldModels).Error; err != nil {
+		return err
+	}
+	oldModelsList := strings.Split(oldModels, ",")
+
 	// 如果不是onehub，直接更新数据库
 	if config.OneAPIType != "onehub" {
 		// 开始事务
@@ -357,6 +364,28 @@ func updateModels(channelID int, models []string, modelMapping map[string]string
 		}
 		log.Println("更新成功")
 	}
+
+	// 对比模型变化并发送通知
+    added, removed := compareModels(oldModelsList, models)
+    if len(added) > 0 || len(removed) > 0 {
+        var channelName string
+        if err := db.Raw("SELECT name FROM channels WHERE id = ?", channelID).Scan(&channelName).Error; err != nil {
+            log.Printf("获取渠道名称失败: %v", err)
+        }
+
+        change := ChannelChange{
+            ChannelID:     channelID,
+            ChannelName:   channelName,
+            OldModels:     oldModelsList,
+            NewModels:     models,
+            AddedModels:   added,
+            RemovedModels: removed,
+        }
+
+        if err := sendNotification(change); err != nil {
+            log.Printf("发送通知失败: %v", err)
+        }
+    }
 	return nil
 }
 

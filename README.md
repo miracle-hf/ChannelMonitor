@@ -17,6 +17,7 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 - [x] Support multiple database types, including MySQL, SQLite, PostgreSQL, and SQL Server
 - [x] Concurrent testing
 - [x] Support Uptime Kuma, push URL during testing to visualize model availability
+- [x] Support update notifications via SMTP email and Telegram Bot
 
 ## Installation
 
@@ -81,11 +82,11 @@ The configuration file is `config.json` located in the same directory, with the 
 {
   "oneapi_type": "oneapi",
   "exclude_channel": [5],
-  "exclude_model": ["advanced-voice"],
-  "models": ["gpt-3.5-turbo", "gpt-4"],
+  "exclude_model": ["advanced-voice", "minimax_s2v-01", "minimax_video-01", "minimax_video-01-live2d"],
+  "models": ["gpt-3.5-turbo", "gpt-4o"],
   "force_models": false,
   "time_period": "1h",
-  "db_type": "mysql",
+  "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
   "base_url": "http://localhost:3000",
   "system_token": "YOUR_SYSTEM_TOKEN",
@@ -97,6 +98,26 @@ The configuration file is `config.json` located in the same directory, with the 
     },
     "channel_url": {
       "5": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+    }
+  },
+  "notification": {
+    "smtp": {
+      "enabled": false,
+      "host": "smtp.example.com",
+      "port": 25,
+      "username": "your-email@example.com",
+      "password": "your-password",
+      "from": "sender@example.com",
+      "to": "recipient@example.com"
+    },
+    "webhook": {
+      "enabled": false,
+      "type": "telegram",
+      "telegram": {
+        "chat_id": "YOUR_CHAT_ID",
+        "retry": 3
+      },
+      "secret": "YOUR_WEBHOOK_SECRET"
     }
   }
 }
@@ -114,6 +135,9 @@ Configuration explanation:
 - base_url: The base URL for OneAPI/NewAPI/OneHub. If using host mode, you can directly use http://localhost:3000. Currently, only OneHub requires this field.
 - system_token: System token, currently only required for OneHub.
 - uptime-kuma: Configuration for Uptime Kuma. The status can be `enabled` or `disabled`. The model_url and channel_url are the availability Push URLs for models and channels.
+- notification: Configuration for update notifications, including SMTP email and Telegram Bot
+- notification.smtp: SMTP email configuration, where enabled is `true` or `false`, host is the SMTP server address, port is the server port, username and password are login credentials, from is the sender's email, and to is the recipient's email
+- notification.webhook: Webhook configuration, where enabled is `true` or `false`, type currently only supports `telegram`, telegram contains Telegram Bot settings, chat_id is your telegram ID, retry is the number of retry attempts, and secret is the API key
 
 ### MySQL
 

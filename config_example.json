@@ -1,7 +1,7 @@
 {
     "oneapi_type": "oneapi",
     "exclude_channel": [5],
-    "exclude_model": ["advanced-voice"],
+    "exclude_model": ["advanced-voice", "minimax_s2v-01", "minimax_video-01", "minimax_video-01-live2d"],
     "models": ["gpt-3.5-turbo", "gpt-4o"],
     "force_models": false,
     "time_period": "1h",
@@ -17,6 +17,26 @@
         },
         "channel_url": {
             "5": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+        }
+    },
+    "notification": {
+        "smtp": {
+            "enabled": false,
+            "host": "smtp.example.com",
+            "port": 25,
+            "username": "your-email@example.com",
+            "password": "your-password",
+            "from": "sender@example.com",
+            "to": "recipient@example.com"
+        },
+        "webhook": {
+            "enabled": false,
+            "type": "telegram",
+            "telegram": {
+                "chat_id": "YOUR_CHAT_ID",
+                "retry": 3
+            },
+            "secret": "YOUR_WEBHOOK_SECRET"
         }
     }
 }

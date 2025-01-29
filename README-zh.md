@@ -17,6 +17,7 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 - [x] 支持多种数据库类型（MySQL、SQLite、PostgreSQL、SQL Server）
 - [x] 并发测试
 - [x] 支持Uptime Kuma， 在测试时Push URL来可视化模型可用性
+- [x] 支持更新推送，包括SMTP邮件和Telegram Bot
 
 
 ## 安装
@@ -82,11 +83,11 @@ docker-compose up -d
 {
   "oneapi_type": "oneapi",
   "exclude_channel": [5],
-  "exclude_model": ["advanced-voice"],
-  "models": ["gpt-3.5-turbo", "gpt-4"],
+  "exclude_model": ["advanced-voice", "minimax_s2v-01", "minimax_video-01", "minimax_video-01-live2d"],
+  "models": ["gpt-3.5-turbo", "gpt-4o"],
   "force_models": false,
   "time_period": "1h",
-  "db_type": "mysql",
+  "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
   "base_url": "http://localhost:3000",
   "system_token": "YOUR_SYSTEM_TOKEN",
@@ -98,6 +99,26 @@ docker-compose up -d
     },
     "channel_url": {
       "5": "https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping="
+    }
+  },
+  "notification": {
+    "smtp": {
+      "enabled": false,
+      "host": "smtp.example.com",
+      "port": 25,
+      "username": "your-email@example.com",
+      "password": "your-password",
+      "from": "sender@example.com",
+      "to": "recipient@example.com"
+    },
+    "webhook": {
+      "enabled": false,
+      "type": "telegram",
+      "telegram": {
+        "chat_id": "YOUR_CHAT_ID",
+        "retry": 3
+      },
+      "secret": "YOUR_WEBHOOK_SECRET"
     }
   }
 }
@@ -115,6 +136,9 @@ docker-compose up -d
 - base_url: OneAPI/NewAPI/OneHub的基础URL，如果使用host模式，可以直接使用http://localhost:3000，目前只有OneHub需要填写
 - system_token: 系统Token，目前只有OneHub需要填写
 - uptime-kuma: Uptime Kuma的配置，status为`enabled`或`disabled`，model_url和channel_url为模型和渠道的可用性Push URL
+- notification: 更新推送的配置，包括SMTP邮件和Telegram Bot
+- notification.smtp: SMTP邮件配置，enabled为`true`或`false`，host为SMTP服务器地址，port为端口，username和password为登录凭证，from为发件人，to为收件人
+- notification.webhook: Webhook配置，enabled为`true`或`false`，type目前仅支持`telegram`，telegram为Telegram Bot的配置，chat_id为聊天ID（填写你的telegram id），retry为重试次数，secret为API密钥
 
 ### MySQL
 
