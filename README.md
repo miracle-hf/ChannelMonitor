@@ -16,6 +16,7 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 - [x] Support configurable intervals
 - [x] Support multiple database types, including MySQL, SQLite, PostgreSQL, and SQL Server
 - [x] Concurrent testing
+- [x] Request rate limiting at the second level
 - [x] Support Uptime Kuma, push URL during testing to visualize model availability
 - [x] Support update notifications via SMTP email and Telegram Bot
 
@@ -86,6 +87,8 @@ The configuration file is `config.json` located in the same directory, with the 
   "models": ["gpt-3.5-turbo", "gpt-4o"],
   "force_models": false,
   "time_period": "1h",
+  "max_concurrent": 5,
+  "rps": 5,
   "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
   "base_url": "http://localhost:3000",
@@ -130,6 +133,8 @@ Configuration explanation:
 - models: List of models, used only when unable to retrieve models from the channel (/v1/models)
 - force_models: If true, only the above models will be tested, and channel models will not be fetched. Default is false
 - time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
+- max_concurrency: Maximum number of concurrent tests within a channel, default is 5
+- rps: Requests per second within a channel, default is 5
 - db_type: Database type, including mysql, sqlite, postgres, sqlserver
 - db_dsn: Database DSN string, the format varies by database type. Examples below
 - base_url: The base URL for OneAPI/NewAPI/OneHub. If using host mode, you can directly use http://localhost:3000. Currently, only OneHub requires this field.

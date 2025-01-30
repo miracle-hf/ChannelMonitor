@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"golang.org/x/time/rate"
+	"context"
 
 	"gorm.io/gorm"
 )
@@ -144,10 +146,20 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 	// 测试模型并发处理
 	modelWg := sync.WaitGroup{}
 	modelMu := sync.Mutex{}
+	sem := make(chan struct{}, config.MaxConcurrent)
+
+	limiter := rate.NewLimiter(rate.Limit(config.RPS), config.RPS)
+
 	for _, model := range modelList {
 		modelWg.Add(1)
+		sem <- struct{}{}
+
 		go func(model string) {
 			defer modelWg.Done()
+			defer func() { <-sem }()
+			// 限流
+			limiter.Wait(context.Background())
+
 			url := channel.BaseURL
 			if !strings.Contains(channel.BaseURL, "/v1/chat/completions") {
 				if !strings.HasSuffix(channel.BaseURL, "/chat") {

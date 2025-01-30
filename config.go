@@ -13,6 +13,8 @@ type Config struct {
 	Models         []string `json:"models"`
 	ForceModels    bool     `json:"force_models"`
 	TimePeriod     string   `json:"time_period"`
+	MaxConcurrent  int      `json:"max_concurrent"`
+	RPS            int      `json:"rps"`
 	DbType         string   `json:"db_type"`
 	DbDsn          string   `json:"db_dsn"`
 	BaseURL        string   `json:"base_url"`
@@ -69,6 +71,14 @@ func loadConfig() (*Config, error) {
 
 	if config.UptimeKuma.Status == "" {
 		config.UptimeKuma.Status = "disabled"
+	}
+
+	if config.MaxConcurrent == 0 {
+		config.MaxConcurrent = 5
+	}
+
+	if config.RPS == 0 {
+		config.RPS = 5
 	}
 
 	return &config, nil

@@ -16,6 +16,7 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 - [x] 支持间隔时间配置
 - [x] 支持多种数据库类型（MySQL、SQLite、PostgreSQL、SQL Server）
 - [x] 并发测试
+- [x] 秒级的请求速率限制
 - [x] 支持Uptime Kuma， 在测试时Push URL来可视化模型可用性
 - [x] 支持更新推送，包括SMTP邮件和Telegram Bot
 
@@ -87,6 +88,8 @@ docker-compose up -d
   "models": ["gpt-3.5-turbo", "gpt-4o"],
   "force_models": false,
   "time_period": "1h",
+  "max_concurrent": 5,
+  "rps": 5,
   "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
   "base_url": "http://localhost:3000",
@@ -131,6 +134,8 @@ docker-compose up -d
 - models: 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
 - force_models: 如果为true，将强制只测试上述模型，不再获取渠道的模型，默认为false
 - time_period: 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
+- max_concurrency: 在一个渠道内测试的最大并发数，默认为5
+- rps: 在一个渠道内测试的每秒请求数，默认为5
 - db_type: 数据库类型，包括mysql、sqlite、postgres、sqlserver
 - db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
 - base_url: OneAPI/NewAPI/OneHub的基础URL，如果使用host模式，可以直接使用http://localhost:3000，目前只有OneHub需要填写
