@@ -33,8 +33,12 @@ build() {
     fi
     
     echo "Building for ${GOOS}/${GOARCH}..."
-    CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "${LDFLAGS}" -o "${OUTPUT}" .
-    
+    if [ "$GOARCH" = "amd64" ] && [ "$GOOS" = "linux" ]; then
+        CGO_ENABLED=1 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "${LDFLAGS}" -o "${OUTPUT}" .
+    else
+        CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "${LDFLAGS}" -o "${OUTPUT}" .
+    fi
+
     if [ $? -eq 0 ]; then
         echo "✅ Finished building for ${GOOS}/${GOARCH}"
         # 压缩二进制文件
