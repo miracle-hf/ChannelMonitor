@@ -19,19 +19,33 @@ type ChannelChange struct {
 }
 
 func sendNotification(change ChannelChange) error {
-	if config.Notification.SMTP.Enabled {
-		if err := sendEmailNotification(change); err != nil {
-			return fmt.Errorf("发送邮件通知失败: %v", err)
-		}
-	}
+    var e1, e2 error
 
-	if config.Notification.Webhook.Enabled {
-		if err := sendWebhookNotification(change); err != nil {
-			return fmt.Errorf("发送Webhook通知失败: %v", err)
-		}
-	}
+    if config.Notification.SMTP.Enabled {
+        if err := sendEmailNotification(change); err != nil {
+            e1 = fmt.Errorf("发送邮件通知失败: %v", err)
+        }
+    }
 
-	return nil
+    if config.Notification.Webhook.Enabled {
+        if err := sendWebhookNotification(change); err != nil {
+            e2 = fmt.Errorf("发送Webhook通知失败: %v", err)
+        }
+    }
+
+    if e1 != nil && e2 != nil {
+        return fmt.Errorf("%v\n%v", e1, e2)
+    }
+
+    if e1 != nil {
+        return e1
+    }
+
+    if e2 != nil {
+        return e2
+    }
+
+    return nil
 }
 
 func sendEmailNotification(change ChannelChange) error {

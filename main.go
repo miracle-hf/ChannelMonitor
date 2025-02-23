@@ -406,6 +406,10 @@ func pushModelUptime(modelName string) error {
 		return nil
 	}
 
+	if config.UptimeKuma.ModelURL == nil {
+		return nil
+	}
+
 	pushURL, ok := config.UptimeKuma.ModelURL[modelName]
 	if !ok {
 		return fmt.Errorf("找不到模型 %s 的推送地址", modelName)
@@ -432,6 +436,10 @@ func pushModelUptime(modelName string) error {
 
 func pushChannelUptime(channelID int) error {
 	if config.UptimeKuma.Status != "enabled" {
+		return nil
+	}
+
+	if config.UptimeKuma.ChannelURL == nil {
 		return nil
 	}
 
