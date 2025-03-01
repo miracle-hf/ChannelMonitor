@@ -7,19 +7,21 @@ import (
 )
 
 type Config struct {
-	OneAPIType     string   `json:"oneapi_type"`
-	ExcludeChannel []int    `json:"exclude_channel"`
-	ExcludeModel   []string `json:"exclude_model"`
-	Models         []string `json:"models"`
-	ForceModels    bool     `json:"force_models"`
-	TimePeriod     string   `json:"time_period"`
-	MaxConcurrent  int      `json:"max_concurrent"`
-	RPS            int      `json:"rps"`
-	DbType         string   `json:"db_type"`
-	DbDsn          string   `json:"db_dsn"`
-	BaseURL        string   `json:"base_url"`
-	SystemToken    string   `json:"system_token"`
-	UptimeKuma     struct {
+	OneAPIType        string   `json:"oneapi_type"`
+	ExcludeChannel    []int    `json:"exclude_channel"`
+	ExcludeModel      []string `json:"exclude_model"`
+	Models            []string `json:"models"`
+	ForceModels       bool     `json:"force_models"`
+	ForceInsideModels bool     `json:"force_inside_models"`
+	TimePeriod        string   `json:"time_period"`
+	MaxConcurrent     int      `json:"max_concurrent"`
+	RPS               int      `json:"rps"`
+	DbType            string   `json:"db_type"`
+	DbDsn             string   `json:"db_dsn"`
+	DoNotModifyDb     bool     `json:"do_not_modify_db"`
+	BaseURL           string   `json:"base_url"`
+	SystemToken       string   `json:"system_token"`
+	UptimeKuma        struct {
 		Status     string            `json:"status"`
 		ModelURL   map[string]string `json:"model_url"`
 		ChannelURL map[string]string `json:"channel_url"`

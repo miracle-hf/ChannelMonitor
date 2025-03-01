@@ -4,11 +4,13 @@
     "exclude_model": ["advanced-voice", "minimax_s2v-01", "minimax_video-01", "minimax_video-01-live2d"],
     "models": ["gpt-3.5-turbo", "gpt-4o"],
     "force_models": false,
+    "force_inside_models": false,
     "time_period": "1h",
     "max_concurrent": 5,
     "rps": 5,
     "db_type": "YOUR_DB_TYPE",
     "db_dsn": "YOUR_DB_DSN",
+    "do_not_modify_db": false,
     "base_url": "http://localhost:3000",
     "system_token": "YOUR_SYSTEM_TOKEN",
     "uptime-kuma": {

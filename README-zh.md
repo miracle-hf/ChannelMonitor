@@ -87,11 +87,13 @@ docker-compose up -d
   "exclude_model": ["advanced-voice", "minimax_s2v-01", "minimax_video-01", "minimax_video-01-live2d"],
   "models": ["gpt-3.5-turbo", "gpt-4o"],
   "force_models": false,
+  "force_inside_models": false,
   "time_period": "1h",
   "max_concurrent": 5,
   "rps": 5,
   "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
+  "do_not_modify_db": false,
   "base_url": "http://localhost:3000",
   "system_token": "YOUR_SYSTEM_TOKEN",
   "uptime-kuma": {
@@ -133,11 +135,13 @@ docker-compose up -d
 - exclude_model: 排除不予监控的模型ID  
 - models: 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
 - force_models: 如果为true，将强制只测试上述模型，不再获取渠道的模型，默认为false
+- force_inside_models: 如果为true，将强制只测试OneAPI设置的模型，不再获取模型列表，默认为false。如果force_models为true，此项无效 
 - time_period: 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
 - max_concurrency: 在一个渠道内测试的最大并发数，默认为5
 - rps: 在一个渠道内测试的每秒请求数，默认为5
 - db_type: 数据库类型，包括mysql、sqlite、postgres、sqlserver
 - db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
+- do_not_modify_db: 如果为true，将不会修改数据库中的可用模型，默认为false
 - base_url: OneAPI/NewAPI/OneHub的基础URL，如果使用host模式，可以直接使用http://localhost:3000，目前只有OneHub需要填写
 - system_token: 系统Token，目前只有OneHub需要填写
 - uptime-kuma: Uptime Kuma的配置，status为`enabled`或`disabled`，model_url和channel_url为模型和渠道的可用性Push URL

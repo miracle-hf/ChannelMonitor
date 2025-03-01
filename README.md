@@ -86,11 +86,13 @@ The configuration file is `config.json` located in the same directory, with the 
   "exclude_model": ["advanced-voice", "minimax_s2v-01", "minimax_video-01", "minimax_video-01-live2d"],
   "models": ["gpt-3.5-turbo", "gpt-4o"],
   "force_models": false,
+  "force_inside_models": false,
   "time_period": "1h",
   "max_concurrent": 5,
   "rps": 5,
   "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
+  "do_not_modify_db": false,
   "base_url": "http://localhost:3000",
   "system_token": "YOUR_SYSTEM_TOKEN",
   "uptime-kuma": {
@@ -132,11 +134,13 @@ Configuration explanation:
 - exclude_model: IDs of models to exclude from monitoring
 - models: List of models, used only when unable to retrieve models from the channel (/v1/models)
 - force_models: If true, only the above models will be tested, and channel models will not be fetched. Default is false
+- force_inside_models: If true, only the models set in OneAPI will be tested, and the model list will not be fetched. Default is false. If force_models is true, this option is invalid.
 - time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
 - max_concurrency: Maximum number of concurrent tests within a channel, default is 5
 - rps: Requests per second within a channel, default is 5
 - db_type: Database type, including mysql, sqlite, postgres, sqlserver
 - db_dsn: Database DSN string, the format varies by database type. Examples below
+- do_not_modify_db: If true, the available models in the database will not be modified. Default is false
 - base_url: The base URL for OneAPI/NewAPI/OneHub. If using host mode, you can directly use http://localhost:3000. Currently, only OneHub requires this field.
 - system_token: System token, currently only required for OneHub.
 - uptime-kuma: Configuration for Uptime Kuma. The status can be `enabled` or `disabled`. The model_url and channel_url are the availability Push URLs for models and channels.

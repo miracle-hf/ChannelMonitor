@@ -101,45 +101,56 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 		log.Println("强制使用自定义模型列表")
 		modelList = config.Models
 	} else {
-		// 从/v1/models接口获取模型列表
-		req, err := http.NewRequest("GET", channel.BaseURL+"/v1/models", nil)
-		if err != nil {
-			log.Printf("创建请求失败：%v\n", err)
-			return
-		}
-		req.Header.Set("Authorization", "Bearer "+channel.Key)
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Println("获取模型列表失败：", err, "尝试自定义模型列表")
-			modelList = config.Models
+		if config.ForceInsideModels {
+			log.Println("强制使用内置模型列表")
+			// 从数据库获取模型列表
+			var models string
+			if err := db.Raw("SELECT models FROM channels WHERE id = ?", channel.ID).Scan(&models).Error; err != nil {
+				log.Printf("获取渠道 %s(ID:%d) 的模型列表失败：%v\n", channel.Name, channel.ID, err)
+				return
+			}
+			modelList = strings.Split(models, ",")
 		} else {
-			defer resp.Body.Close()
-			body, _ := ioutil.ReadAll(resp.Body)
-			if resp.StatusCode != http.StatusOK {
-				log.Printf("获取模型列表失败，状态码：%d，响应：%s\n", resp.StatusCode, string(body))
+			// 从/v1/models接口获取模型列表
+			req, err := http.NewRequest("GET", channel.BaseURL+"/v1/models", nil)
+			if err != nil {
+				log.Printf("创建请求失败：%v\n", err)
 				return
 			}
+			req.Header.Set("Authorization", "Bearer "+channel.Key)
 
-			// 解析响应JSON
-			var response struct {
-				Data []struct {
-					ID string `json:"id"`
-				} `json:"data"`
-			}
-
-			if err := json.Unmarshal(body, &response); err != nil {
-				log.Printf("解析模型列表失败：%v\n", err)
-				return
-			}
-			// 提取模型ID列表
-			for _, model := range response.Data {
-				if containsString(config.ExcludeModel, model.ID) {
-					log.Printf("模型 %s 在排除列表中，跳过\n", model.ID)
-					continue
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Println("获取模型列表失败：", err, "尝试自定义模型列表")
+				modelList = config.Models
+			} else {
+				defer resp.Body.Close()
+				body, _ := ioutil.ReadAll(resp.Body)
+				if resp.StatusCode != http.StatusOK {
+					log.Printf("获取模型列表失败，状态码：%d，响应：%s\n", resp.StatusCode, string(body))
+					return
 				}
-				modelList = append(modelList, model.ID)
+
+				// 解析响应JSON
+				var response struct {
+					Data []struct {
+						ID string `json:"id"`
+					} `json:"data"`
+				}
+
+				if err := json.Unmarshal(body, &response); err != nil {
+					log.Printf("解析模型列表失败：%v\n", err)
+					return
+				}
+				// 提取模型ID列表
+				for _, model := range response.Data {
+					if containsString(config.ExcludeModel, model.ID) {
+						log.Printf("模型 %s 在排除列表中，跳过\n", model.ID)
+						continue
+					}
+					modelList = append(modelList, model.ID)
+				}
 			}
 		}
 	}
@@ -220,6 +231,10 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 	modelWg.Wait()
 
 	// 更新模型
+	if config.DoNotModifyDb {
+		log.Println("跳过数据库更新")
+		return
+	}
 	mu.Lock()
 	err := updateModels(channel.ID, availableModels, channel.ModelMapping)
 	mu.Unlock()
