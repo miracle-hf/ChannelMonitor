@@ -19,21 +19,24 @@ Channel Monitor is a tool designed for monitoring OneAPI/NewAPI channels. It dir
 - [x] Request rate limiting at the second level
 - [x] Support Uptime Kuma, push URL during testing to visualize model availability
 - [x] Support update notifications via SMTP email and Telegram Bot
+- [x] Support both JSON and YAML configuration formats
 
 ## Installation
 
 ### Binary
 
-Download the latest version of the binary file from the [Releases](https://github.com/DullJZ/ChannelMonitor/releases) page. After configuring `config.json` in the same directory, you can run it. It is recommended to use tools like `screen` or `nohup` to run it in the background.
+Download the latest version of the binary file from the [Releases](https://github.com/DullJZ/ChannelMonitor/releases) page. After configuring `config.json` or `config.yaml` in the same directory, you can run it. It is recommended to use tools like `screen` or `nohup` to run it in the background.
 Note ⚠️: If you need to use an SQLite database, please use the Docker solution or compile yourself after enabling CGO.
 
 ```bash
 mkdir ChannelMonitor && cd ChannelMonitor
 wget https://github.com/DullJZ/ChannelMonitor/releases/download/v0.1.0/ChannelMonitor_linux_amd64
 chmod +x ChannelMonitor_linux_amd64
-# Download and modify the configuration file
+# Download and modify the configuration file (choose JSON or YAML format)
 wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
-nano config.json
+# or use YAML format
+# wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.yaml -O config.yaml
+nano config.json  # or nano config.yaml
 screen -S ChannelMonitor
 ./ChannelMonitor_linux_amd64
 ```
@@ -42,12 +45,16 @@ screen -S ChannelMonitor
 
 ```bash
 docker pull dulljz/channel-monitor
-# Download and modify the configuration file
+# Download and modify the configuration file (choose JSON or YAML format)
 wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
-nano config.json
+# or use YAML format
+# wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.yaml -O config.yaml
+nano config.json  # or nano config.yaml
 # If using the host's database, you can simply use the host mode,
 # and use localhost:3306 as the database address
 docker run -d --name ChannelMonitor -v ./config.json:/app/config.json --net host dulljz/channel-monitor
+# If using YAML format
+# docker run -d --name ChannelMonitor -v ./config.yaml:/app/config.yaml --net host dulljz/channel-monitor
 # If using an SQLite database, mount the database file
 # docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -v /path/to/database.db:/app/database.db dulljz/channel-monitor
 ```
@@ -61,6 +68,8 @@ services:
     image: dulljz/channel-monitor
     volumes:
       - ./config.json:/app/config.json
+      # or use YAML format
+      # - ./config.yaml:/app/config.yaml
       # If using an SQLite database, mount the database file
       # - /path/to/database.db:/app/database.db
     # If using the host's database, you can simply use the host mode,
@@ -69,15 +78,22 @@ services:
 ```
 
 ```bash
-# Download and modify the configuration file
+# Download and modify the configuration file (choose JSON or YAML format)
 wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
-nano config.json
+# or use YAML format
+# wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.yaml -O config.yaml
+nano config.json  # or nano config.yaml
 docker-compose up -d
 ```
 
 ## Configuration
 
-The configuration file is `config.json` located in the same directory, with the following format:
+The configuration file can be either `config.json`, `config.yaml`, or `config.yml` in the same directory. The program will automatically detect and use the available configuration file in the order of `config.yaml` -> `config.yml` -> `config.json`.
+
+### JSON Format
+
+<details>
+<summary>Click to expand/collapse JSON configuration example</summary>
 
 ```json
 {
@@ -127,6 +143,61 @@ The configuration file is `config.json` located in the same directory, with the 
   }
 }
 ```
+
+</details>
+
+### YAML Format
+
+<details>
+<summary>Click to expand/collapse YAML configuration example</summary>
+
+```yaml
+oneapi_type: oneapi
+exclude_channel: [5]
+exclude_model: 
+  - advanced-voice
+  - minimax_s2v-01
+  - minimax_video-01
+  - minimax_video-01-live2d
+models: 
+  - gpt-3.5-turbo
+  - gpt-4o
+force_models: false
+force_inside_models: false
+time_period: 1h
+max_concurrent: 5
+rps: 5
+db_type: YOUR_DB_TYPE
+db_dsn: YOUR_DB_DSN
+do_not_modify_db: false
+base_url: http://localhost:3000
+system_token: YOUR_SYSTEM_TOKEN
+uptime-kuma:
+  status: disabled
+  model_url:
+    gpt-3.5-turbo: https://demo.kuma.pet/api/push/A12n43563?status=up&msg=OK&ping=
+    gpt-4o: https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping=
+  channel_url:
+    "5": https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping=
+notification:
+  smtp:
+    enabled: false
+    host: smtp.example.com
+    port: 25
+    username: your-email@example.com
+    password: your-password
+    from: sender@example.com
+    to: recipient@example.com
+  webhook:
+    enabled: false
+    type: telegram
+    telegram:
+      chat_id: YOUR_CHAT_ID
+      retry: 3
+    secret: YOUR_WEBHOOK_SECRET
+```
+
+</details>
 
 Configuration explanation:
 - oneapi_type: Type of OneAPI, including oneapi, newapi, onehub (reserved field, currently has no effect)

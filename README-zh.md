@@ -19,22 +19,25 @@ Channel Monitor 是一个用于监控OneAPI/NewAPI渠道的工具，它直接读
 - [x] 秒级的请求速率限制
 - [x] 支持Uptime Kuma， 在测试时Push URL来可视化模型可用性
 - [x] 支持更新推送，包括SMTP邮件和Telegram Bot
+- [x] 支持JSON和YAML两种配置文件格式
 
 
 ## 安装
 
 ### 二进制
 
-从[Releases](https://github.com/DullJZ/ChannelMonitor/releases)页面下载最新版本的二进制文件，在同一目录下配置`config.json`后运行即可。建议使用`screen`或`nohup`等工具后台运行。
+从[Releases](https://github.com/DullJZ/ChannelMonitor/releases)页面下载最新版本的二进制文件，在同一目录下配置`config.json`或`config.yaml`后运行即可。建议使用`screen`或`nohup`等工具后台运行。
 注意⚠️：如果你需要使用SQLite数据库，请使用docker方案或自行启用CGO编译。
 
 ```bash
 mkdir ChannelMonitor && cd ChannelMonitor
 wget https://github.com/DullJZ/ChannelMonitor/releases/download/v0.1.0/ChannelMonitor_linux_amd64
 chmod +x ChannelMonitor_linux_amd64
-# 下载并修改配置文件
+# 下载并修改配置文件（选择JSON或YAML格式）
 wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
-nano config.json
+# 或使用YAML格式
+# wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.yaml -O config.yaml
+nano config.json  # 或 nano config.yaml
 screen -S ChannelMonitor
 ./ChannelMonitor_linux_amd64
 ```
@@ -43,12 +46,16 @@ screen -S ChannelMonitor
 
 ```bash
 docker pull dulljz/channel-monitor
-# 下载并修改配置文件
+# 下载并修改配置文件（选择JSON或YAML格式）
 wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
-nano config.json
+# 或使用YAML格式
+# wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.yaml -O config.yaml
+nano config.json  # 或 nano config.yaml
 # 如果使用宿主机的数据库，可以简单使用host模式，
 # 并使用localhost:3306作为数据库地址
-docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -net host dulljz/channel-monitor
+docker run -d --name ChannelMonitor -v ./config.json:/app/config.json --net host dulljz/channel-monitor
+# 如果使用YAML格式
+# docker run -d --name ChannelMonitor -v ./config.yaml:/app/config.yaml --net host dulljz/channel-monitor
 # 如果使用SQLite数据库，挂载数据库文件
 # docker run -d --name ChannelMonitor -v ./config.json:/app/config.json -v /path/to/database.db:/app/database.db dulljz/channel-monitor
 ```
@@ -62,6 +69,8 @@ services:
     image: dulljz/channel-monitor
     volumes:
       - ./config.json:/app/config.json
+      # 或使用YAML格式
+      # - ./config.yaml:/app/config.yaml
       # 如果使用SQLite数据库，挂载数据库文件
       # - /path/to/database.db:/app/database.db
     # 如果使用宿主机的数据库，可以简单使用host模式，
@@ -70,15 +79,22 @@ services:
 ```
 
 ```bash
-# 下载并修改配置文件
+# 下载并修改配置文件（选择JSON或YAML格式）
 wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.json -O config.json
-nano config.json
+# 或使用YAML格式
+# wget https://raw.githubusercontent.com/DullJZ/ChannelMonitor/refs/heads/main/config_example.yaml -O config.yaml
+nano config.json  # 或 nano config.yaml
 docker-compose up -d
 ```
 
 ## 配置
 
-配置文件使用同级目录下的`config.json`文件，格式如下：
+配置文件可以是同级目录下的`config.json`、`config.yaml`或`config.yml`文件，程序会自动按照`config.yaml` -> `config.yml` -> `config.json`的顺序检测并使用可用的配置文件。
+
+### JSON格式
+
+<details>
+<summary>点击展开/折叠JSON配置示例</summary>
 
 ```json
 {
@@ -128,6 +144,61 @@ docker-compose up -d
   }
 }
 ```
+
+</details>
+
+### YAML格式
+
+<details>
+<summary>点击展开/折叠YAML配置示例</summary>
+
+```yaml
+oneapi_type: oneapi
+exclude_channel: [5]
+exclude_model: 
+  - advanced-voice
+  - minimax_s2v-01
+  - minimax_video-01
+  - minimax_video-01-live2d
+models: 
+  - gpt-3.5-turbo
+  - gpt-4o
+force_models: false
+force_inside_models: false
+time_period: 1h
+max_concurrent: 5
+rps: 5
+db_type: YOUR_DB_TYPE
+db_dsn: YOUR_DB_DSN
+do_not_modify_db: false
+base_url: http://localhost:3000
+system_token: YOUR_SYSTEM_TOKEN
+uptime-kuma:
+  status: disabled
+  model_url:
+    gpt-3.5-turbo: https://demo.kuma.pet/api/push/A12n43563?status=up&msg=OK&ping=
+    gpt-4o: https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping=
+  channel_url:
+    "5": https://demo.kuma.pet/api/push/ArJd2BOUJN?status=up&msg=OK&ping=
+notification:
+  smtp:
+    enabled: false
+    host: smtp.example.com
+    port: 25
+    username: your-email@example.com
+    password: your-password
+    from: sender@example.com
+    to: recipient@example.com
+  webhook:
+    enabled: false
+    type: telegram
+    telegram:
+      chat_id: YOUR_CHAT_ID
+      retry: 3
+    secret: YOUR_WEBHOOK_SECRET
+```
+
+</details>
 
 配置说明：
 - oneapi_type: OneAPI的类型，包括oneapi、newapi、onehub（保留字段，暂时无影响）
