@@ -21,6 +21,7 @@ type Config struct {
 	TimePeriod        string   `json:"time_period" yaml:"time_period"`
 	MaxConcurrent     int      `json:"max_concurrent" yaml:"max_concurrent"`
 	RPS               int      `json:"rps" yaml:"rps"`
+	Timeout           int      `json:"timeout" yaml:"timeout"`
 	DbType            string   `json:"db_type" yaml:"db_type"`
 	DbDsn             string   `json:"db_dsn" yaml:"db_dsn"`
 	DoNotModifyDb     bool     `json:"do_not_modify_db" yaml:"do_not_modify_db"`

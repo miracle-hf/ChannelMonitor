@@ -107,6 +107,7 @@ docker-compose up -d
   "time_period": "1h",
   "max_concurrent": 5,
   "rps": 5,
+  "timeout": 10,
   "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
   "do_not_modify_db": false,
@@ -168,6 +169,7 @@ force_inside_models: false
 time_period: 1h
 max_concurrent: 5
 rps: 5
+timeout: 10
 db_type: YOUR_DB_TYPE
 db_dsn: YOUR_DB_DSN
 do_not_modify_db: false
@@ -203,13 +205,14 @@ notification:
 配置说明：
 - oneapi_type: OneAPI的类型，包括oneapi、newapi、onehub（保留字段，暂时无影响）
 - exclude_channel: 排除不予监控的渠道ID
-- exclude_model: 排除不予监控的模型ID  
+- exclude_model: 排除不予监控的模型ID
 - models: 模型列表，仅当获取不到渠道的模型(/v1/models)时使用
 - force_models: 如果为true，将强制只测试上述模型，不再获取渠道的模型，默认为false
 - force_inside_models: 如果为true，将强制只测试OneAPI设置的模型，不再获取模型列表，默认为false。如果force_models为true，此项无效 
 - time_period: 模型可用性测试的时间间隔，建议不小于30分钟，接收的时间格式为s、m、h
 - max_concurrency: 在一个渠道内测试的最大并发数，默认为5
 - rps: 在一个渠道内测试的每秒请求数，默认为5
+- timeout: 测试时的超时时间（秒），默认为 10
 - db_type: 数据库类型，包括mysql、sqlite、postgres、sqlserver
 - db_dsn: 数据库DSN字符串，不同数据库类型的DSN格式不同，示例如下
 - do_not_modify_db: 如果为true，将不会修改数据库中的可用模型，默认为false

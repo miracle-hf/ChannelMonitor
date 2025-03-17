@@ -13,6 +13,7 @@ force_inside_models: false
 time_period: 1h
 max_concurrent: 5
 rps: 5
+timeout: 10
 db_type: YOUR_DB_TYPE
 db_dsn: YOUR_DB_DSN
 do_not_modify_db: false
