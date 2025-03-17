@@ -106,6 +106,7 @@ The configuration file can be either `config.json`, `config.yaml`, or `config.ym
   "time_period": "1h",
   "max_concurrent": 5,
   "rps": 5,
+  "timeout": 10,
   "db_type": "YOUR_DB_TYPE",
   "db_dsn": "YOUR_DB_DSN",
   "do_not_modify_db": false,
@@ -167,6 +168,7 @@ force_inside_models: false
 time_period: 1h
 max_concurrent: 5
 rps: 5
+timeout: 10
 db_type: YOUR_DB_TYPE
 db_dsn: YOUR_DB_DSN
 do_not_modify_db: false
@@ -209,6 +211,7 @@ Configuration explanation:
 - time_period: Interval for testing model availability, recommended not less than 30 minutes, accepts time formats s, m, h
 - max_concurrency: Maximum number of concurrent tests within a channel, default is 5
 - rps: Requests per second within a channel, default is 5
+- timeout: Request timeout (seconds), default is 10
 - db_type: Database type, including mysql, sqlite, postgres, sqlserver
 - db_dsn: Database DSN string, the format varies by database type. Examples below
 - do_not_modify_db: If true, the available models in the database will not be modified. Default is false
