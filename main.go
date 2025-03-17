@@ -201,7 +201,7 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
 
-			client := &http.Client{Timeout: config.Timeout * time.Second}
+			client := &http.Client{Timeout: time.Duration(config.Timeout) * time.Second}
 			resp, err := client.Do(req)
 			if err != nil {
 				log.Printf("\033[31m请求失败：%v\033[0m\n", err)

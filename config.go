@@ -116,5 +116,9 @@ func loadConfig() (*Config, error) {
 		config.RPS = 5
 	}
 
+	if config.Timeout == 0 {
+		config.Timeout = 10
+	}
+
 	return &config, nil
 }
