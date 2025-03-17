@@ -1,16 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/time/rate"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
-	"golang.org/x/time/rate"
-	"context"
 
 	"gorm.io/gorm"
 )
@@ -201,7 +201,7 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
 
-			client := &http.Client{Timeout: 10 * time.Second}
+			client := &http.Client{Timeout: config.Timeout * time.Second}
 			resp, err := client.Do(req)
 			if err != nil {
 				log.Printf("\033[31m请求失败：%v\033[0m\n", err)
@@ -393,26 +393,26 @@ func updateModels(channelID int, models []string, modelMapping map[string]string
 	}
 
 	// 对比模型变化并发送通知
-    added, removed := compareModels(oldModelsList, models)
-    if len(added) > 0 || len(removed) > 0 {
-        var channelName string
-        if err := db.Raw("SELECT name FROM channels WHERE id = ?", channelID).Scan(&channelName).Error; err != nil {
-            log.Printf("获取渠道名称失败: %v", err)
-        }
+	added, removed := compareModels(oldModelsList, models)
+	if len(added) > 0 || len(removed) > 0 {
+		var channelName string
+		if err := db.Raw("SELECT name FROM channels WHERE id = ?", channelID).Scan(&channelName).Error; err != nil {
+			log.Printf("获取渠道名称失败: %v", err)
+		}
 
-        change := ChannelChange{
-            ChannelID:     channelID,
-            ChannelName:   channelName,
-            OldModels:     oldModelsList,
-            NewModels:     models,
-            AddedModels:   added,
-            RemovedModels: removed,
-        }
+		change := ChannelChange{
+			ChannelID:     channelID,
+			ChannelName:   channelName,
+			OldModels:     oldModelsList,
+			NewModels:     models,
+			AddedModels:   added,
+			RemovedModels: removed,
+		}
 
-        if err := sendNotification(change); err != nil {
-            log.Printf("发送通知失败: %v", err)
-        }
-    }
+		if err := sendNotification(change); err != nil {
+			log.Printf("发送通知失败: %v", err)
+		}
+	}
 	return nil
 }
 
