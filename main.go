@@ -12,8 +12,142 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 )
+
+// Prometheus metrics
+var (
+	// 渠道相关指标
+	channelStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "channel_status",
+			Help: "Current status of channels (1 = active, 0 = inactive)",
+		},
+		[]string{"channel_id", "channel_name", "channel_type"},
+	)
+
+	channelTestTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "channel_test_total",
+			Help: "Total number of channel tests",
+		},
+		[]string{"channel_id", "channel_name", "status"},
+	)
+
+	// 模型相关指标
+	modelTestTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "model_test_total",
+			Help: "Total number of model tests",
+		},
+		[]string{"channel_id", "channel_name", "model", "status"},
+	)
+
+	modelAvailability = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "model_availability",
+			Help: "Model availability (1 = available, 0 = unavailable)",
+		},
+		[]string{"channel_id", "channel_name", "model"},
+	)
+
+	modelResponseTime = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "model_response_time_seconds",
+			Help:    "Response time for model tests in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"channel_id", "channel_name", "model"},
+	)
+
+	// 系统相关指标
+	testCycleTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "test_cycle_total",
+			Help: "Total number of test cycles completed",
+		},
+	)
+
+	testCycleDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "test_cycle_duration_seconds",
+			Help:    "Duration of test cycles in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	activeChannelsGauge = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "active_channels_total",
+			Help: "Total number of active channels",
+		},
+	)
+
+	availableModelsGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "available_models_total",
+			Help: "Total number of available models per channel",
+		},
+		[]string{"channel_id", "channel_name"},
+	)
+
+	// 数据库操作指标
+	dbOperationTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "database_operation_total",
+			Help: "Total number of database operations",
+		},
+		[]string{"operation", "status"},
+	)
+
+	dbOperationDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "database_operation_duration_seconds",
+			Help:    "Duration of database operations in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"operation"},
+	)
+
+	// 通知相关指标
+	notificationTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "notification_total",
+			Help: "Total number of notifications sent",
+		},
+		[]string{"type", "status"},
+	)
+
+	// UptimeKuma推送指标
+	uptimeKumaPushTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "uptimekuma_push_total",
+			Help: "Total number of UptimeKuma pushes",
+		},
+		[]string{"type", "status"},
+	)
+)
+
+func init() {
+	// 注册所有指标
+	prometheus.MustRegister(
+		channelStatus,
+		channelTestTotal,
+		modelTestTotal,
+		modelAvailability,
+		modelResponseTime,
+		testCycleTotal,
+		testCycleDuration,
+		activeChannelsGauge,
+		availableModelsGauge,
+		dbOperationTotal,
+		dbOperationDuration,
+		notificationTotal,
+		uptimeKumaPushTotal,
+	)
+}
 
 type Channel struct {
 	ID           int
@@ -31,12 +165,19 @@ var (
 )
 
 func fetchChannels() ([]Channel, error) {
+	startTime := time.Now()
+	defer func() {
+		dbOperationDuration.WithLabelValues("fetch_channels").Observe(time.Since(startTime).Seconds())
+	}()
+
 	query := "SELECT id, type, name, base_url, `key`, status, model_mapping FROM channels"
 	rows, err := db.Raw(query).Rows()
 	if err != nil {
+		dbOperationTotal.WithLabelValues("fetch_channels", "error").Inc()
 		return nil, err
 	}
 	defer rows.Close()
+	dbOperationTotal.WithLabelValues("fetch_channels", "success").Inc()
 
 	var channels []Channel
 	for rows.Next() {
@@ -67,8 +208,20 @@ func fetchChannels() ([]Channel, error) {
 			log.Printf("渠道 %s(ID:%d) 在排除列表中，跳过\n", c.Name, c.ID)
 			continue
 		}
+		
+		// 更新渠道状态指标
+		channelStatus.WithLabelValues(
+			fmt.Sprintf("%d", c.ID),
+			c.Name,
+			fmt.Sprintf("%d", c.Type),
+		).Set(float64(c.Status))
+		
 		channels = append(channels, c)
 	}
+	
+	// 更新活跃渠道数量
+	activeChannelsGauge.Set(float64(len(channels)))
+	
 	log.Printf("获取到 %d 个渠道\n", len(channels))
 	log.Printf("准备测试的渠道：%v\n", channels)
 	return channels, nil
@@ -97,6 +250,14 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 
 	var availableModels []string
 	modelList := []string{}
+	
+	// 记录渠道测试
+	channelTestTotal.WithLabelValues(
+		fmt.Sprintf("%d", channel.ID),
+		channel.Name,
+		"started",
+	).Inc()
+	
 	if config.ForceModels {
 		log.Println("强制使用自定义模型列表")
 		modelList = config.Models
@@ -105,10 +266,14 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 			log.Println("强制使用内置模型列表")
 			// 从数据库获取模型列表
 			var models string
+			startTime := time.Now()
 			if err := db.Raw("SELECT models FROM channels WHERE id = ?", channel.ID).Scan(&models).Error; err != nil {
+				dbOperationTotal.WithLabelValues("get_models", "error").Inc()
 				log.Printf("获取渠道 %s(ID:%d) 的模型列表失败：%v\n", channel.Name, channel.ID, err)
 				return
 			}
+			dbOperationDuration.WithLabelValues("get_models").Observe(time.Since(startTime).Seconds())
+			dbOperationTotal.WithLabelValues("get_models", "success").Inc()
 			modelList = strings.Split(models, ",")
 		} else {
 			// 从/v1/models接口获取模型列表
@@ -186,8 +351,9 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 			reqBody := map[string]interface{}{
 				"model": model,
 				"messages": []map[string]string{
-					{"role": "user", "content": "Hello! Reply in short"},
+					{"role": "user", "content": "Hi"},
 				},
+				"max_tokens": 1,
 			}
 			jsonData, _ := json.Marshal(reqBody)
 
@@ -196,15 +362,41 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 			req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonData)))
 			if err != nil {
 				log.Printf("创建请求失败：%v\n", err)
+				modelTestTotal.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+					"error",
+				).Inc()
+				modelAvailability.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+				).Set(0)
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
 
+			// 记录响应时间
+			startTime := time.Now()
 			client := &http.Client{Timeout: time.Duration(config.Timeout) * time.Second}
 			resp, err := client.Do(req)
+			responseTime := time.Since(startTime).Seconds()
+			
 			if err != nil {
 				log.Printf("\033[31m请求失败：%v\033[0m\n", err)
+				modelTestTotal.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+					"error",
+				).Inc()
+				modelAvailability.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+				).Set(0)
 				return
 			}
 			defer resp.Body.Close()
@@ -215,20 +407,77 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 				modelMu.Lock()
 				availableModels = append(availableModels, model)
 				modelMu.Unlock()
+				
+				// 更新指标
+				modelTestTotal.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+					"success",
+				).Inc()
+				modelAvailability.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+				).Set(1)
+				modelResponseTime.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+				).Observe(responseTime)
+				
 				log.Printf("\033[32m渠道 %s(ID:%d) 的模型 %s 测试成功\033[0m\n", channel.Name, channel.ID, model)
 				// 推送UptimeKuma
 				if err := pushModelUptime(model); err != nil {
 					log.Printf("\033[31m推送UptimeKuma失败：%v\033[0m\n", err)
+					uptimeKumaPushTotal.WithLabelValues("model", "error").Inc()
+				} else {
+					uptimeKumaPushTotal.WithLabelValues("model", "success").Inc()
 				}
 				if err := pushChannelUptime(channel.ID); err != nil {
 					log.Printf("\033[31m推送UptimeKuma失败：%v\033[0m\n", err)
+					uptimeKumaPushTotal.WithLabelValues("channel", "error").Inc()
+				} else {
+					uptimeKumaPushTotal.WithLabelValues("channel", "success").Inc()
 				}
 			} else {
 				log.Printf("\033[31m渠道 %s(ID:%d) 的模型 %s 测试失败，状态码：%d，响应：%s\033[0m\n", channel.Name, channel.ID, model, resp.StatusCode, string(body))
+				modelTestTotal.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+					"failed",
+				).Inc()
+				modelAvailability.WithLabelValues(
+					fmt.Sprintf("%d", channel.ID),
+					channel.Name,
+					model,
+				).Set(0)
 			}
 		}(model)
 	}
 	modelWg.Wait()
+
+	// 更新可用模型数量指标
+	availableModelsGauge.WithLabelValues(
+		fmt.Sprintf("%d", channel.ID),
+		channel.Name,
+	).Set(float64(len(availableModels)))
+	
+	// 记录渠道测试完成
+	if len(availableModels) > 0 {
+		channelTestTotal.WithLabelValues(
+			fmt.Sprintf("%d", channel.ID),
+			channel.Name,
+			"success",
+		).Inc()
+	} else {
+		channelTestTotal.WithLabelValues(
+			fmt.Sprintf("%d", channel.ID),
+			channel.Name,
+			"failed",
+		).Inc()
+	}
 
 	// 更新模型
 	if config.DoNotModifyDb {
@@ -240,12 +489,19 @@ func testModels(channel Channel, wg *sync.WaitGroup, mu *sync.Mutex) {
 	mu.Unlock()
 	if err != nil {
 		log.Printf("\033[31m更新渠道 %s(ID:%d) 的模型失败：%v\033[0m\n", channel.Name, channel.ID, err)
+		dbOperationTotal.WithLabelValues("update_models", "error").Inc()
 	} else {
 		log.Printf("渠道 %s(ID:%d) 可用模型：%v\n", channel.Name, channel.ID, availableModels)
+		dbOperationTotal.WithLabelValues("update_models", "success").Inc()
 	}
 }
 
 func updateModels(channelID int, models []string, modelMapping map[string]string) error {
+	startTime := time.Now()
+	defer func() {
+		dbOperationDuration.WithLabelValues("update_models").Observe(time.Since(startTime).Seconds())
+	}()
+
 	// 获取旧的模型列表
 	var oldModels string
 	if err := db.Raw("SELECT models FROM channels WHERE id = ?", channelID).Scan(&oldModels).Error; err != nil {
@@ -411,6 +667,9 @@ func updateModels(channelID int, models []string, modelMapping map[string]string
 
 		if err := sendNotification(change); err != nil {
 			log.Printf("发送通知失败: %v", err)
+			notificationTotal.WithLabelValues("model_change", "error").Inc()
+		} else {
+			notificationTotal.WithLabelValues("model_change", "success").Inc()
 		}
 	}
 	return nil
@@ -482,12 +741,35 @@ func pushChannelUptime(channelID int) error {
 	return nil
 }
 
+// 启动Metrics服务器
+func startMetricsServer() {
+	metricsPort := ":2112" // 默认端口
+	if config.MetricsPort != "" {
+		metricsPort = config.MetricsPort
+	}
+	
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+	
+	log.Printf("Starting metrics server on %s", metricsPort)
+	if err := http.ListenAndServe(metricsPort, mux); err != nil {
+		log.Printf("Failed to start metrics server: %v", err)
+	}
+}
+
 func main() {
 	var err error
 	config, err = loadConfig()
 	if err != nil {
 		log.Fatal("加载配置失败：", err)
 	}
+
+	// 启动Metrics服务器
+	go startMetricsServer()
 
 	// 解析时间周期
 	duration, err := time.ParseDuration(config.TimePeriod)
@@ -505,7 +787,9 @@ func main() {
 	defer ticker.Stop()
 
 	for {
+		cycleStart := time.Now()
 		log.Println("开始检测...")
+		
 		channels, err := fetchChannels()
 		if err != nil {
 			log.Printf("\033[31m获取渠道失败：%v\033[0m\n", err)
@@ -522,6 +806,12 @@ func main() {
 			go testModels(channel, &wg, &mu)
 		}
 		wg.Wait()
+
+		// 记录测试周期指标
+		testCycleDuration.Observe(time.Since(cycleStart).Seconds())
+		testCycleTotal.Inc()
+		
+		log.Printf("测试周期完成，耗时：%v\n", time.Since(cycleStart))
 
 		// 等待下一个周期
 		<-ticker.C

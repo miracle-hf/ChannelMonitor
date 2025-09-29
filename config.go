@@ -10,6 +10,13 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+type PushGatewayConfig struct {
+    Enabled  bool   `json:"enabled" yaml:"enabled"`
+    URL      string `json:"url" yaml:"url"`
+    Job      string `json:"job" yaml:"job"`
+    Instance string `json:"instance" yaml:"instance"`
+    Interval string `json:"interval" yaml:"interval"`
+}
 
 type Config struct {
 	OneAPIType        string   `json:"oneapi_type" yaml:"oneapi_type"`
@@ -32,6 +39,9 @@ type Config struct {
 		ModelURL   map[string]string `json:"model_url" yaml:"model_url"`
 		ChannelURL map[string]string `json:"channel_url" yaml:"channel_url"`
 	} `json:"uptime-kuma" yaml:"uptime-kuma"`
+	MetricsPort       string            `json:"metrics_port"`
+    MetricsEnabled    bool 		  `json:"metrics_enabled"`
+	PushGateway    PushGatewayConfig `json:"push_gateway" yaml:"push_gateway"`
 	Notification struct {
 		SMTP struct {
 			Enabled  bool   `json:"enabled" yaml:"enabled"`
